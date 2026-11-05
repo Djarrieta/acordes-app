@@ -1,0 +1,56 @@
+# Acordes — transpositor
+
+Aplicación web personal para cargar canciones de [LaCuerda](https://acordes.lacuerda.net), mostrar sus letras con los acordes alineados y transponerlos a notación latina (Do, Re, Mi, Fa, Sol, La, Si).
+
+## Requisitos
+
+- [Bun](https://bun.sh/) 1.x
+
+## Ejecución local
+
+```sh
+bun install --frozen-lockfile
+bun run dev
+```
+
+Abre <http://localhost:4173>. Para ejecutar el servidor sin modo de desarrollo:
+
+```sh
+bun run start
+```
+
+El servidor lee `HOST` y `PORT` del entorno; sus valores predeterminados son `0.0.0.0` y `4173`. Puedes copiarlos desde `.env.example` si necesitas configurar esos valores.
+
+## Uso
+
+Pega la URL HTTPS de una canción de `acordes.lacuerda.net`. Usa los controles para transponer los acordes por semitonos o restaurar la tonalidad original. El estado de las canciones se conserva solo en memoria mientras el proceso está activo.
+
+## Pruebas y tipos
+
+```sh
+bun run test
+bun run typecheck
+```
+
+## Docker Compose
+
+Crea el archivo de entorno requerido y levanta el servicio:
+
+```sh
+cp .env.example .env
+docker compose up --build
+```
+
+La aplicación quedará disponible en <http://127.0.0.1:4173>. Compose publica el puerto solo en la interfaz local.
+
+## Estructura
+
+- `src/parser/`: descarga y parsea canciones de LaCuerda.
+- `src/transpose/`: transposición de acordes.
+- `src/render/`: renderizado de HTML.
+- `src/routes/`: rutas HTTP y respuestas HTMX.
+- `src/state.ts`: estado de canciones en memoria.
+- `public/`: estilos de la interfaz.
+- `tests/`: pruebas del parser y la transposición.
+
+La interfaz carga HTMX desde un CDN. La aplicación no incluye autenticación; no la expongas a redes públicas sin añadir controles de acceso.
