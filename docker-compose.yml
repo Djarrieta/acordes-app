@@ -1,0 +1,16 @@
+services:
+  web:
+    build: .
+    container_name: acordes-app-c
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      HOST: 0.0.0.0
+      PORT: 4173
+    ports:
+      - "127.0.0.1:4173:4173"
+    logging:
+      driver: json-file
+      options:
+        max-size: "20m"
+        max-file: "7"

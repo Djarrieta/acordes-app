@@ -1,0 +1,17 @@
+[Unit]
+Description=Cloudflare Tunnel connector (acordes)
+After=network-online.target docker.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+EnvironmentFile=/etc/cloudflared/acordes.env
+ExecStart=/usr/local/bin/cloudflared tunnel run
+Restart=on-failure
+RestartSec=5
+TimeoutStartSec=0
+NoNewPrivileges=true
+ProtectSystem=full
+
+[Install]
+WantedBy=multi-user.target
