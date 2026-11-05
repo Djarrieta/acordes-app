@@ -33,14 +33,30 @@ const LATIN_NATURAL: Record<string, string> = {
   B: "Si",
 };
 
+const LATIN_NOTES: Record<string, string> = {
+  do: "C",
+  re: "D",
+  mi: "E",
+  fa: "F",
+  sol: "G",
+  la: "A",
+  si: "B",
+};
+
 type ParsedNote = {
   letter: string;
   accidental: string;
 };
 
 function parseNote(value: string): ParsedNote | null {
-  const match = /^([A-G])([#b]{0,2})$/.exec(value);
-  return match ? { letter: match[1]!, accidental: match[2]! } : null;
+  const match = /^(DO|RE|MI|FA|SOL|LA|SI|[A-G])([#b]{0,2})$/.exec(value);
+  if (!match) return null;
+
+  const note = match[1]!;
+  return {
+    letter: LATIN_NOTES[note.toLowerCase()] ?? note.toUpperCase(),
+    accidental: match[2]!,
+  };
 }
 
 function noteIndex(note: ParsedNote): number {
@@ -64,18 +80,17 @@ export function transposeChord(chord: string, offset: number): string {
     throw new TypeError("El desplazamiento debe ser un número entero de semitonos.");
   }
 
-  const match = /^([A-G](?:#{1,2}|b{1,2})?)([^/]*)(?:\/([A-G](?:#{1,2}|b{1,2})?))?$/.exec(
-    chord,
-  );
+  const note = "(DO|RE|MI|FA|SOL|LA|SI|[A-G])([#b]{0,2})";
+  const match = new RegExp(`^${note}([^/]*)(?:/${note})?$`).exec(chord);
   if (!match) {
     return chord;
   }
 
-  const root = parseNote(match[1]!);
-  const bass = match[3] ? parseNote(match[3]) : null;
-  if (!root || (match[3] && !bass)) {
+  const root = parseNote(`${match[1]}${match[2]}`);
+  const bass = match[4] ? parseNote(`${match[4]}${match[5]}`) : null;
+  if (!root || (match[4] && !bass)) {
     return chord;
   }
 
-  return `${formatNote(root, offset)}${match[2]}${bass ? `/${formatNote(bass, offset)}` : ""}`;
+  return `${formatNote(root, offset)}${match[3]}${bass ? `/${formatNote(bass, offset)}` : ""}`;
 }
