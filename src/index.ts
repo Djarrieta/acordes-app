@@ -1,4 +1,5 @@
 import { homePage } from "./routes/home";
+import { chordDiagramRoute } from "./routes/chord-diagram";
 import { loadRoute } from "./routes/load";
 import { resetRoute, transposeRoute } from "./routes/transpose";
 
@@ -15,6 +16,13 @@ Bun.serve({
 
     if (request.method === "GET" && pathname === "/") {
       return homePage();
+    }
+    if (pathname === "/chord-diagram") {
+      if (request.method === "GET") return chordDiagramRoute(request);
+      return new Response("Método no permitido.", {
+        status: 405,
+        headers: { Allow: "GET" },
+      });
     }
     if (request.method === "POST" && pathname === "/load") {
       return loadRoute(request);

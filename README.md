@@ -23,7 +23,7 @@ El servidor lee `HOST` y `PORT` del entorno; sus valores predeterminados son `0.
 
 ## Uso
 
-Pega la URL HTTPS de una canción de `acordes.lacuerda.net`. Usa los controles para transponer los acordes por semitonos o restaurar la tonalidad original. El estado de las canciones se conserva solo en memoria mientras el proceso está activo.
+Pega la URL HTTPS de una canción de `acordes.lacuerda.net`. Selecciona cualquier acorde de la letra para ver una digitación para guitarra. Usa los controles para transponer los acordes por semitonos o restaurar la tonalidad original. El estado de las canciones se conserva solo en memoria mientras el proceso está activo.
 
 ## Pruebas y tipos
 
@@ -47,6 +47,7 @@ La aplicación quedará disponible en <http://127.0.0.1:4173>. Compose publica e
 
 - `src/parser/`: descarga y parsea canciones de LaCuerda.
 - `src/transpose/`: transposición de acordes.
+- `src/guitar/`: generación de diagramas de digitación para guitarra.
 - `src/render/`: renderizado de HTML.
 - `src/routes/`: rutas HTTP y respuestas HTMX.
 - `src/state.ts`: estado de canciones en memoria.

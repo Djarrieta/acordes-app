@@ -171,6 +171,182 @@ h1 {
   background: #f2efe8;
 }
 
+.chord-modal {
+  width: min(27rem, calc(100% - 2rem));
+  max-width: none;
+  max-height: min(90vh, 42rem);
+  overflow: auto;
+  border: 1px solid #e4dfd4;
+  border-radius: 1.25rem;
+  background: #fffefa;
+  color: #242323;
+  padding: 0;
+  box-shadow: 0 24px 80px rgb(36 35 35 / 28%);
+}
+
+.chord-modal[open] {
+  animation: chord-modal-enter 140ms ease-out;
+}
+
+.chord-modal::backdrop {
+  background: rgb(25 29 26 / 60%);
+  backdrop-filter: blur(3px);
+}
+
+.chord-modal-content {
+  padding: 1.5rem 1.75rem 1.75rem;
+}
+
+.chord-modal-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  border-bottom: 1px solid #ece8de;
+  padding-bottom: 1rem;
+}
+
+.chord-modal-header .eyebrow {
+  margin-bottom: 0.25rem;
+}
+
+.chord-modal-header h2 {
+  margin: 0;
+  font-size: 1.35rem;
+  letter-spacing: -0.035em;
+}
+
+.chord-modal-header form {
+  margin: 0;
+}
+
+.chord-modal-close {
+  display: grid;
+  width: 2.4rem;
+  height: 2.4rem;
+  place-items: center;
+  border: 1px solid #d6d1c6;
+  border-radius: 50%;
+  background: transparent;
+  color: #3e3a34;
+  font-size: 1.5rem;
+  line-height: 1;
+  padding: 0;
+}
+
+.chord-modal-close:hover {
+  background: #f2efe8;
+}
+
+.chord-viewer {
+  display: grid;
+  min-height: 10rem;
+  justify-items: center;
+  padding-top: 1.25rem;
+  text-align: center;
+}
+
+.chord-viewer > p {
+  margin: 0;
+  align-self: center;
+  color: #66625a;
+}
+
+.chord-diagram {
+  width: 100%;
+  color: #3e3a34;
+  text-align: center;
+}
+
+.chord-diagram h3 {
+  margin: 0;
+  color: #a34a24;
+  font-size: 1.6rem;
+  letter-spacing: -0.04em;
+}
+
+.chord-diagram p {
+  margin: 0.3rem 0 0;
+  color: #817c72;
+  font-size: 0.85rem;
+}
+
+.chord-diagram svg {
+  display: block;
+  width: min(15rem, 100%);
+  height: auto;
+  margin: 0.8rem auto 0;
+  overflow: visible;
+}
+
+.fret-string,
+.fret-wire {
+  stroke: #a29c90;
+  stroke-width: 1.6;
+}
+
+.fret-wire.nut {
+  stroke: #3e3a34;
+  stroke-width: 4;
+}
+
+.open-string {
+  fill: none;
+  stroke: #38664c;
+  stroke-width: 2;
+}
+
+.finger-dot {
+  fill: #2f684d;
+}
+
+.string-mark,
+.string-name,
+.fret-label {
+  fill: #66625a;
+  font-family: inherit;
+  font-size: 12px;
+  text-anchor: middle;
+}
+
+.string-mark {
+  font-size: 15px;
+}
+
+.chord-trigger {
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  font: inherit;
+  font-weight: inherit;
+  padding: 0;
+  vertical-align: baseline;
+}
+
+.chord-trigger:hover {
+  background: #f5e8d9;
+  color: #743719;
+}
+
+.chord-trigger:focus-visible {
+  position: relative;
+  z-index: 1;
+  border-radius: 0.2rem;
+}
+
+@keyframes chord-modal-enter {
+  from {
+    opacity: 0;
+    transform: translateY(0.5rem) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
 .transpose-status {
   margin-left: auto;
   color: #66625a;
@@ -229,6 +405,10 @@ footer {
 
   .song {
     padding-inline: 1rem;
+  }
+
+  .chord-modal-content {
+    padding: 1.25rem 1.25rem 1.5rem;
   }
 
   .transpose-status {

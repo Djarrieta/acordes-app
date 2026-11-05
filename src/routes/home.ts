@@ -7,7 +7,7 @@ export function homePage(): Response {
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="color-scheme" content="light">
   <title>Acordes — transpositor</title>
-  <link rel="stylesheet" href="/public/styles.css">
+  <link rel="stylesheet" href="/public/styles.css?v=guitar-modal-1">
   <script src="https://unpkg.com/htmx.org@2.0.4"></script>
   <script>
     htmx.config.responseHandling = [
@@ -16,6 +16,15 @@ export function homePage(): Response {
       { code: "[45]..", swap: true, error: true },
       { code: ".", swap: false }
     ];
+    document.addEventListener("htmx:afterSwap", (event) => {
+      if (event.detail.target?.id !== "chord-viewer") return;
+      const dialog = document.getElementById("chord-modal");
+      if (dialog instanceof HTMLDialogElement && !dialog.open) dialog.showModal();
+    });
+    document.addEventListener("click", (event) => {
+      const dialog = document.getElementById("chord-modal");
+      if (event.target === dialog && dialog instanceof HTMLDialogElement) dialog.close();
+    });
   </script>
 </head>
 <body>
