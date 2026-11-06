@@ -6,16 +6,30 @@ import {
 import { renderError, renderSong } from "../render/song";
 import { createSong } from "../state";
 
-async function readFormValue(request: Request, key: string): Promise<string> {
-  const form = await request.formData();
-  const value = form.get(key);
-  return typeof value === "string" ? value.trim() : "";
-}
-
 export async function loadRoute(request: Request): Promise<Response> {
   let url: string;
+  let offset = 0;
   try {
-    url = await readFormValue(request, "url");
+    const form = await request.formData();
+    const urlValue = form.get("url");
+    if (typeof urlValue !== "string") {
+      return new Response(renderError("Introduce la URL de una canción."), { status: 400 });
+    }
+    url = urlValue.trim();
+    const offsetValue = form.get("offset");
+    if (offsetValue !== null) {
+      if (typeof offsetValue !== "string" || !/^-?\d+$/.test(offsetValue)) {
+        return new Response(renderError("La preferencia de transposición no es válida."), {
+          status: 400,
+        });
+      }
+      offset = Number(offsetValue);
+      if (!Number.isSafeInteger(offset)) {
+        return new Response(renderError("La preferencia de transposición no es válida."), {
+          status: 400,
+        });
+      }
+    }
   } catch {
     return new Response(renderError("No se pudo leer el formulario enviado."), { status: 400 });
   }
@@ -25,7 +39,7 @@ export async function loadRoute(request: Request): Promise<Response> {
 
   try {
     const parsed = await fetchLacuerdaSong(url);
-    return new Response(renderSong(createSong(parsed, url)), {
+    return new Response(renderSong(createSong(parsed, url, offset)), {
       headers: { "Content-Type": "text/html; charset=utf-8" },
     });
   } catch (error) {

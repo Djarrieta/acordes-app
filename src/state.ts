@@ -9,8 +9,8 @@ export type SongState = {
 
 const songs = new Map<string, SongState>();
 
-export function createSong(parsed: ParsedSong, url: string): SongState {
-  const state = { id: crypto.randomUUID(), parsed, offset: 0, url };
+export function createSong(parsed: ParsedSong, url: string, offset = 0): SongState {
+  const state = { id: crypto.randomUUID(), parsed, offset, url };
   songs.set(state.id, state);
   return state;
 }

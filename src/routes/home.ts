@@ -7,12 +7,13 @@ export function homePage(): Response {
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="color-scheme" content="light">
   <title>Acordes — transpositor</title>
-  <link rel="stylesheet" href="/public/styles.css?v=wizard-5">
+  <link rel="stylesheet" href="/public/styles.css?v=wizard-6">
   <script src="https://unpkg.com/htmx.org@2.0.4"></script>
   <script>
     const FAVORITES_KEY = "acordes-liked-songs";
+    const LEGACY_TRANSPOSITIONS_KEY = "acordes-song-transpositions";
     const SONG_ID = /^\\/([a-z0-9_-]+)\\/([a-z0-9_.-]+)\\.shtml$/i;
-    let favoriteSongs = new Map();
+    let songPreferences = new Map();
     let onlyFavorites = false;
     htmx.config.responseHandling = [
       { code: "204", swap: false },
@@ -28,6 +29,10 @@ export function homePage(): Response {
         if (dialog instanceof HTMLDialogElement && !dialog.open) dialog.showModal();
       }
       if (target?.id !== "song-container" || !target.querySelector(".song-card")) return;
+      const card = target.querySelector(".song-card");
+      if (["/load", "/transpose", "/reset"].includes(event.detail.requestConfig?.path)) {
+        saveTranspositionPreference(card);
+      }
       updateWizard(2);
       document.getElementById("search-panel").hidden = true;
       target.hidden = false;
@@ -48,6 +53,17 @@ export function homePage(): Response {
           return;
         }
         updateWizard(1);
+      }
+    });
+    document.addEventListener("htmx:configRequest", (event) => {
+      const url = event.detail.parameters.url;
+      if (typeof url !== "string") return;
+      try {
+        const songId = new URL(url, window.location.origin).pathname;
+        const offset = songPreferences.get(songId)?.offset;
+        if (offset !== undefined) event.detail.parameters.offset = String(offset);
+      } catch (error) {
+        console.error("No se pudo leer la preferencia de transposición:", error);
       }
     });
     document.addEventListener("click", (event) => {
@@ -106,6 +122,7 @@ export function homePage(): Response {
         title: title || fileSlug.replace(/\.shtml$/i, "").replace(/[_-]+/g, " "),
         artist: artist || artistSlug.replace(/[_-]+/g, " "),
         url: "https://acordes.lacuerda.net" + id,
+        liked: true,
         legacy: !title || !artist
       };
     }
@@ -122,22 +139,65 @@ export function homePage(): Response {
             : value && typeof value === "object"
               ? favoriteFromId(value.id, value.title, value.artist)
               : null;
-          if (song) songs.set(song.id, song);
+          if (!song) return;
+          if (value && typeof value === "object") {
+            song.liked = value.liked !== false;
+            if (Number.isSafeInteger(value.offset) && value.offset !== 0) song.offset = value.offset;
+          }
+          if (song.liked || song.offset !== undefined) songs.set(song.id, song);
         });
         return songs;
       } catch (error) {
-        console.error("No se pudieron cargar las canciones que te gustan:", error);
-        showFavoriteStorageError("No se pudieron cargar tus canciones que te gustan desde este navegador.");
+        console.error("No se pudieron cargar las preferencias de canciones:", error);
+        showFavoriteStorageError("No se pudieron cargar tus preferencias de canciones desde este navegador.");
         return new Map();
       }
     }
     function persistFavoriteSongs() {
       try {
-        localStorage.setItem(FAVORITES_KEY, JSON.stringify([...favoriteSongs.values()]));
+        localStorage.setItem(FAVORITES_KEY, JSON.stringify([...songPreferences.values()]));
+        return true;
       } catch (error) {
-        console.error("No se pudieron guardar las canciones que te gustan:", error);
-        showFavoriteStorageError("No se pudieron guardar tus canciones que te gustan en este navegador.");
+        console.error("No se pudieron guardar las preferencias de canciones:", error);
+        showFavoriteStorageError("No se pudieron guardar tus preferencias de canciones en este navegador.");
+        return false;
       }
+    }
+    function migrateTranspositionPreferences() {
+      try {
+        const raw = localStorage.getItem(LEGACY_TRANSPOSITIONS_KEY);
+        if (raw === null) return;
+        const stored = JSON.parse(raw);
+        if (!stored || typeof stored !== "object" || Array.isArray(stored)) {
+          throw new TypeError("El formato de preferencias de transposición no es válido.");
+        }
+        Object.entries(stored).forEach(([songId, offset]) => {
+          if (SONG_ID.test(songId) && typeof offset === "number" && Number.isSafeInteger(offset)) {
+            const song = songPreferences.get(songId) ?? favoriteFromId(songId);
+            if (!song) return;
+            if (!songPreferences.has(songId)) song.liked = false;
+            song.offset = offset === 0 ? undefined : offset;
+            if (song.liked || song.offset !== undefined) songPreferences.set(songId, song);
+            else songPreferences.delete(songId);
+          }
+        });
+        if (persistFavoriteSongs()) localStorage.removeItem(LEGACY_TRANSPOSITIONS_KEY);
+      } catch (error) {
+        console.error("No se pudieron cargar las preferencias de transposición:", error);
+        showFavoriteStorageError("No se pudieron cargar las preferencias de transposición desde este navegador.");
+      }
+    }
+    function saveTranspositionPreference(card) {
+      const songId = card.getAttribute("data-song-id");
+      const offset = Number(card.getAttribute("data-offset"));
+      if (!songId || !SONG_ID.test(songId) || !Number.isSafeInteger(offset)) return;
+      const song = songPreferences.get(songId) ?? favoriteFromId(songId);
+      if (!song) return;
+      if (!songPreferences.has(songId)) song.liked = false;
+      song.offset = offset === 0 ? undefined : offset;
+      if (song.liked || song.offset !== undefined) songPreferences.set(songId, song);
+      else songPreferences.delete(songId);
+      persistFavoriteSongs();
     }
     function createSongListItem(song) {
       const item = document.createElement("li");
@@ -167,7 +227,8 @@ export function homePage(): Response {
     }
     function renderFavoriteSongs() {
       const results = document.getElementById("search-results");
-      if (!onlyFavorites || favoriteSongs.size === 0) {
+      const favorites = [...songPreferences.values()].filter((song) => song.liked);
+      if (!onlyFavorites || favorites.length === 0) {
         results.replaceChildren();
         return;
       }
@@ -177,17 +238,17 @@ export function homePage(): Response {
       const summary = document.createElement("p");
       summary.className = "search-summary";
       const count = document.createElement("strong");
-      count.textContent = favoriteSongs.size + (favoriteSongs.size === 1 ? " canción que te gusta" : " canciones que te gustan");
+      count.textContent = favorites.length + (favorites.length === 1 ? " canción que te gusta" : " canciones que te gustan");
       summary.append(count);
       const list = document.createElement("ul");
       list.className = "result-list";
-      favoriteSongs.forEach((song) => list.append(createSongListItem(song)));
+      favorites.forEach((song) => list.append(createSongListItem(song)));
       section.append(summary, list);
       results.replaceChildren(section);
       htmx.process(section);
     }
     async function hydrateLegacyFavorites() {
-      const unresolved = [...favoriteSongs.values()].filter((song) => song.legacy);
+      const unresolved = [...songPreferences.values()].filter((song) => song.liked && song.legacy);
       const artistSlugs = new Set(unresolved.map((song) => song.id.split("/")[1]));
       let updated = false;
       for (const slug of artistSlugs) {
@@ -197,12 +258,17 @@ export function homePage(): Response {
           const parsed = new DOMParser().parseFromString(await response.text(), "text/html");
           parsed.querySelectorAll(".result-item[data-song-id]").forEach((item) => {
             const id = item.getAttribute("data-song-id");
-            const saved = favoriteSongs.get(id);
+            const saved = songPreferences.get(id);
             if (!saved) return;
-            const song = favoriteFromId(id, item.getAttribute("data-song-title"), item.getAttribute("data-song-artist"));
+            const song = {
+              ...saved,
+              ...favoriteFromId(id, item.getAttribute("data-song-title"), item.getAttribute("data-song-artist")),
+              offset: saved.offset,
+              liked: saved.liked,
+            };
             if (song) {
               song.legacy = false;
-              favoriteSongs.set(id, song);
+              songPreferences.set(id, song);
               updated = true;
             }
           });
@@ -218,57 +284,62 @@ export function homePage(): Response {
       const items = document.querySelectorAll("#search-results .result-item[data-song-id]");
       items.forEach((item) => {
         const songId = item.getAttribute("data-song-id");
-        const liked = songId !== null && favoriteSongs.has(songId);
+        const liked = songId !== null && songPreferences.get(songId)?.liked === true;
         item.hidden = onlyFavorites && !liked;
       });
       document.querySelectorAll("[data-favorite-toggle][data-song-id]").forEach((button) => {
         const songId = button.getAttribute("data-song-id");
-        const liked = songId !== null && favoriteSongs.has(songId);
+        const liked = songId !== null && songPreferences.get(songId)?.liked === true;
         const title = liked ? "Quitar de canciones que me gustan" : "Añadir a canciones que me gustan";
         button.setAttribute("aria-pressed", String(liked));
         button.setAttribute("aria-label", title);
         button.setAttribute("title", title);
       });
       const filter = document.getElementById("favorite-filter");
-      filter.disabled = favoriteSongs.size === 0;
-      filter.setAttribute("aria-pressed", String(onlyFavorites && favoriteSongs.size > 0));
+      const hasFavorites = [...songPreferences.values()].some((song) => song.liked);
+      filter.disabled = !hasFavorites;
+      filter.setAttribute("aria-pressed", String(onlyFavorites && hasFavorites));
       const filterLabel = onlyFavorites ? "Dejar de mostrar canciones que me gustan" : "Mostrar canciones que me gustan";
       filter.setAttribute("aria-label", filterLabel);
       filter.setAttribute("title", filterLabel);
-      filter.classList.toggle("is-active", onlyFavorites && favoriteSongs.size > 0);
+      filter.classList.toggle("is-active", onlyFavorites && hasFavorites);
     }
     function toggleFavorite(button) {
       const songId = button.getAttribute("data-song-id");
       if (!songId) return;
-      if (favoriteSongs.has(songId)) {
-        favoriteSongs.delete(songId);
+      const existing = songPreferences.get(songId);
+      if (existing?.liked) {
+        existing.liked = false;
+        if (existing.offset === undefined) songPreferences.delete(songId);
       } else {
-        const song = favoriteFromId(
-          songId,
-          button.getAttribute("data-song-title"),
-          button.getAttribute("data-song-artist"),
-        );
+        const song = existing ?? favoriteFromId(
+            songId,
+            button.getAttribute("data-song-title"),
+            button.getAttribute("data-song-artist"),
+          );
         if (song) {
           song.legacy = false;
-          favoriteSongs.set(songId, song);
+          song.liked = true;
+          songPreferences.set(songId, song);
         }
       }
-      onlyFavorites = favoriteSongs.size > 0;
+      onlyFavorites = [...songPreferences.values()].some((song) => song.liked);
       persistFavoriteSongs();
       applyFavoriteState();
       if (!document.getElementById("search-query").value.trim()) renderFavoriteSongs();
     }
     window.addEventListener("storage", (event) => {
       if (event.key === FAVORITES_KEY) {
-        favoriteSongs = readFavoriteSongs();
-        onlyFavorites = favoriteSongs.size > 0;
+        songPreferences = readFavoriteSongs();
+        onlyFavorites = [...songPreferences.values()].some((song) => song.liked);
         applyFavoriteState();
         if (!document.getElementById("search-query").value.trim()) renderFavoriteSongs();
       }
     });
     document.addEventListener("DOMContentLoaded", () => {
-      favoriteSongs = readFavoriteSongs();
-      onlyFavorites = favoriteSongs.size > 0;
+      songPreferences = readFavoriteSongs();
+      migrateTranspositionPreferences();
+      onlyFavorites = [...songPreferences.values()].some((song) => song.liked);
       applyFavoriteState();
       renderFavoriteSongs();
       void hydrateLegacyFavorites();

@@ -33,7 +33,25 @@ describe("song wizard", () => {
     expect(song).toContain('aria-pressed="false"');
     expect(song).toContain('data-song-title="Canción de prueba"');
     expect(song).toContain('data-song-artist="Artista"');
+    expect(song).toContain('data-song-id="/artista/cancion.shtml" data-offset="0"');
     expect(song).not.toContain("source-link");
     expect(song).not.toContain("https://acordes.lacuerda.net/artista/cancion.shtml");
+  });
+
+  test("renders the saved transposition offset in the song card", () => {
+    const song = renderSong({
+      id: "song-id",
+      parsed: {
+        title: "Canción de prueba",
+        artist: "Artista",
+        lines: [{ chords: [{ chord: "C", column: 0 }], lyric: "Letra" }],
+      },
+      offset: 3,
+      url: "https://acordes.lacuerda.net/artista/cancion.shtml",
+    });
+
+    expect(song).toContain('data-song-id="/artista/cancion.shtml" data-offset="3"');
+    expect(song).toContain("Re#");
+    expect(song).toContain("+3 semitonos");
   });
 });
