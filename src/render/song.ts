@@ -78,6 +78,9 @@ export function renderSong(state: SongState): string {
     </div>
     <div class="youtube-media-box youtube-player-frame" data-youtube-player aria-label="Video de acompañamiento"></div>
   </div>
+  <div class="youtube-playback-controls" data-youtube-playback-controls hidden>
+    <button type="button" class="youtube-play-button" data-youtube-play disabled aria-label="Reproducir audio">▶ <span>Reproducir audio</span></button>
+  </div>
   <details class="youtube-section" data-youtube-song="${songId}">
     <summary class="youtube-summary">
       <span><span class="eyebrow">Acompañamiento</span><strong>YouTube</strong></span>

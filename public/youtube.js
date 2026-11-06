@@ -63,6 +63,18 @@ function setStatus(section, message) {
   if (status) status.textContent = message;
 }
 
+function updatePlaybackButton(section) {
+  const button = section?.closest(".song-card")?.querySelector("[data-youtube-play]");
+  if (!button) return;
+  const ready = Boolean(player?.getPlayerState && window.YT?.PlayerState);
+  const playing = ready && player.getPlayerState() === window.YT.PlayerState.PLAYING;
+  button.disabled = !ready;
+  button.setAttribute("aria-label", playing ? "Pausar audio" : "Reproducir audio");
+  button.innerHTML = playing
+    ? 'Ⅱ <span>Pausar audio</span>'
+    : '▶ <span>Reproducir audio</span>';
+}
+
 function updateChordControls(section, video) {
   const ready = Boolean(video && player && player.getPlayerState);
   const toggle = section.querySelector("[data-chord-mark-toggle]");
@@ -210,6 +222,7 @@ function initializePlayer(section, video) {
         }
         player = event.target;
         updateChordControls(section, video);
+        updatePlaybackButton(section);
         setMarkMode(section, false);
         const restore = pendingPlayback;
         pendingPlayback = null;
@@ -232,8 +245,10 @@ function initializePlayer(section, video) {
           if (playbackTimer !== null) window.clearInterval(playbackTimer);
           updateCurrentChord(section, video);
           playbackTimer = window.setInterval(() => updateCurrentChord(section, video), 250);
+          updatePlaybackButton(section);
         } else {
           section.classList.remove("is-playing");
+          updatePlaybackButton(section);
           if (playbackTimer !== null) {
             window.clearInterval(playbackTimer);
             playbackTimer = null;
@@ -267,12 +282,17 @@ function initializeSection(section) {
   const input = section.querySelector('input[name="url"]');
   const unlinkButton = section.querySelector("[data-youtube-unlink]");
   const summaryState = section.querySelector("[data-youtube-summary-state]");
+  const media = section.closest(".song-card")?.querySelector("[data-youtube-media]");
+  const playbackControls = section.closest(".song-card")?.querySelector("[data-youtube-playback-controls]");
   const host = section.closest(".song-card")?.querySelector("[data-youtube-player]");
   if (input) input.value = video?.url ?? "";
   if (unlinkButton) unlinkButton.hidden = !video;
   if (summaryState) summaryState.textContent = video ? "Video vinculado" : "Configurar audio y marcas";
   updateChordControls(section, video);
-  if (host) host.hidden = !video;
+  if (media) media.hidden = !video;
+  if (playbackControls) playbackControls.hidden = !video;
+  if (host) host.hidden = false;
+  updatePlaybackButton(section);
   if (!video) {
     setMarkMode(section, false);
     section.classList.remove("is-playing");
@@ -286,6 +306,7 @@ function initializeSection(section) {
       }
       highlightedChordIndex = null;
     }
+    updatePlaybackButton(section);
     setStatus(section, storageError || "Busca un video, copia su enlace y pégalo aquí.");
     return;
   }
@@ -409,6 +430,17 @@ document.addEventListener("submit", async (event) => {
 document.addEventListener("click", (event) => {
   const target = event.target;
   if (!(target instanceof Element)) return;
+  const playButton = target.closest("[data-youtube-play]");
+  if (playButton) {
+    if (!player?.getPlayerState || !window.YT?.PlayerState) return;
+    if (player.getPlayerState() === window.YT.PlayerState.PLAYING) {
+      player.pauseVideo();
+    } else {
+      player.playVideo();
+    }
+    updatePlaybackButton(activeSection);
+    return;
+  }
   const toggle = target.closest("[data-chord-mark-toggle]");
   if (!toggle) return;
   const section = toggle.closest("[data-youtube-song]");

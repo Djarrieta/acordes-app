@@ -7,9 +7,9 @@ export function homePage(): Response {
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="color-scheme" content="light">
   <title>Acordes — transpositor</title>
-  <link rel="stylesheet" href="/public/styles.css?v=youtube-5">
+  <link rel="stylesheet" href="/public/styles.css?v=youtube-6">
   <script src="https://unpkg.com/htmx.org@2.0.4"></script>
-  <script src="/public/youtube.js?v=5" defer></script>
+  <script src="/public/youtube.js?v=6" defer></script>
   <script>
     const FAVORITES_KEY = "acordes-liked-songs";
     const LEGACY_TRANSPOSITIONS_KEY = "acordes-song-transpositions";

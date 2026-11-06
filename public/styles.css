@@ -624,6 +624,37 @@ h1 {
   display: none;
 }
 
+.youtube-playback-controls {
+  display: flex;
+  justify-content: center;
+  border-top: 1px solid #ece8de;
+  background: #fcfaf5;
+  padding: 0.8rem 1rem 1rem;
+}
+
+.youtube-playback-controls[hidden] {
+  display: none;
+}
+
+.youtube-play-button {
+  display: inline-flex;
+  min-width: 13rem;
+  align-items: center;
+  justify-content: center;
+  gap: 0.55rem;
+  border-radius: 999px;
+  padding: 0.8rem 1.2rem;
+}
+
+.youtube-play-button:disabled {
+  cursor: wait;
+  opacity: 0.62;
+}
+
+.youtube-play-button span {
+  font-weight: 700;
+}
+
 .youtube-media-box {
   overflow: hidden;
   width: 100%;
