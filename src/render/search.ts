@@ -7,7 +7,8 @@ function loadButton(song: SongMatch): string {
 }
 
 function songListItem(song: SongMatch): string {
-  return `<li class="result-item">
+  const songId = escapeHtml(new URL(song.url).pathname);
+  return `<li class="result-item" data-song-id="${songId}" data-song-title="${escapeHtml(song.title)}" data-song-artist="${escapeHtml(song.artist)}">
       <div class="result-copy">
         <strong>${escapeHtml(song.title)}</strong>
         <span class="result-detail">${escapeHtml(song.artist)}</span>

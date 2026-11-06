@@ -32,6 +32,7 @@ function transpositionLabel(offset: number): string {
 
 export function renderSong(state: SongState): string {
   const id = escapeHtml(state.id);
+  const songId = escapeHtml(new URL(state.url).pathname);
   const controls = [
     { label: "+1 tono", delta: 2 },
     { label: "+½ tono", delta: 1 },
@@ -50,6 +51,7 @@ export function renderSong(state: SongState): string {
   return `<section class="song-card" aria-label="Canción transpuesta">
   <header class="song-header">
     <div><p class="eyebrow">${escapeHtml(state.parsed.artist)}</p><h2 id="selected-song-title" tabindex="-1">${escapeHtml(state.parsed.title)}</h2></div>
+    <button class="favorite-toggle song-favorite-toggle" type="button" data-favorite-toggle data-song-id="${songId}" data-song-title="${escapeHtml(state.parsed.title)}" data-song-artist="${escapeHtml(state.parsed.artist)}" aria-label="Añadir ${escapeHtml(state.parsed.title)} a canciones que me gustan" title="Añadir a canciones que me gustan" aria-pressed="false"><svg aria-hidden="true" viewBox="0 0 24 24" focusable="false"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78Z"/></svg></button>
   </header>
   <div class="song-controls" aria-label="Transponer canción">
     ${controls}

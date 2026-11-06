@@ -222,7 +222,7 @@ h1 {
 
 .search-form .form-row {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 9.5rem auto;
+  grid-template-columns: minmax(0, 1fr) 9.5rem 2.75rem auto;
 }
 
 .form-row input {
@@ -323,6 +323,10 @@ h1 {
   transition: border-color 120ms ease, background 120ms ease, transform 120ms ease;
 }
 
+.result-item[hidden] {
+  display: none;
+}
+
 .result-item:hover {
   transform: translateY(-1px);
   border-color: #c9d6cb;
@@ -351,6 +355,57 @@ h1 {
   padding: 0.58rem 0.8rem;
   font-size: 0.85rem;
   white-space: nowrap;
+}
+
+.search-form button.favorite-filter-toggle {
+  width: 2.75rem;
+  min-width: 2.75rem;
+  height: 2.75rem;
+  justify-self: center;
+}
+
+.favorite-toggle {
+  display: grid;
+  min-width: 2.75rem;
+  place-items: center;
+  border: 1px solid #d6d1c6;
+  background: #fffefa;
+  color: #6c665c;
+  line-height: 1;
+  padding: 0;
+}
+
+.favorite-toggle svg {
+  display: block;
+  width: 1.2rem;
+  height: 1.2rem;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 1.8;
+}
+
+.song-favorite-toggle {
+  flex-shrink: 0;
+  width: 2.75rem;
+  height: 2.75rem;
+  border-radius: 50%;
+  padding: 0;
+}
+
+.favorite-toggle[aria-pressed="true"] {
+  border-color: #e6b7a8;
+  background: #fff2ef;
+  color: #a33e27;
+}
+
+.favorite-toggle[aria-pressed="true"] svg {
+  fill: currentColor;
+}
+
+.favorite-toggle:hover {
+  border-color: #d29b8c;
 }
 
 .result-action.secondary {
@@ -709,10 +764,22 @@ h1 {
   }
 
   .search-form .form-row {
-    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    grid-template-columns: minmax(0, 1fr) 3.2rem;
   }
 
   .search-form .form-row input {
+    grid-column: 1 / -1;
+  }
+
+  .search-form .form-row select {
+    grid-column: 1;
+  }
+
+  .search-form .form-row .favorite-filter-toggle {
+    grid-column: 2;
+  }
+
+  .search-form .form-row button[type="submit"] {
     grid-column: 1 / -1;
   }
 
@@ -728,6 +795,10 @@ h1 {
   .result-action {
     padding-inline: 0.6rem;
     font-size: 0.78rem;
+  }
+
+  .favorite-toggle {
+    min-width: 2.5rem;
   }
 
   .song-header {

@@ -23,7 +23,7 @@ El servidor lee `HOST` y `PORT` del entorno; sus valores predeterminados son `0.
 
 ## Uso
 
-Busca por nombre de canción o de artista y pulsa **Reproducir** en el resultado. La búsqueda inicial muestra canciones para “De música ligera”. Selecciona cualquier acorde de la letra para ver una digitación para guitarra. Usa los controles para transponer los acordes por semitonos o restaurar la tonalidad original. Pulsa **Busca** para volver al buscador. El estado de las canciones se conserva solo en memoria mientras el proceso está activo.
+Busca por nombre de canción o de artista y pulsa **Reproducir** en el resultado. En la vista de reproducción, marca con el corazón las canciones que te gustan; quedan guardadas en el almacenamiento local de tu navegador. Al abrir el buscador, las canciones favoritas aparecen automáticamente y puedes usar el botón de corazón junto al campo de búsqueda para mostrar u ocultar esa lista. El campo empieza vacío. Selecciona cualquier acorde de la letra para ver una digitación para guitarra. Usa los controles para transponer los acordes por semitonos o restaurar la tonalidad original. Pulsa **Busca** para volver al buscador. El estado de transposición se conserva solo en memoria mientras el proceso está activo.
 
 El buscador enlaza cada resultado con la canción correspondiente. Si la búsqueda de canciones no encuentra resultados, cambia el selector a **Artistas** para localizar el artista y ver su listado de canciones.
 

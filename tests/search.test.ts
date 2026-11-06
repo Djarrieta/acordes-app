@@ -5,6 +5,7 @@ import {
   parseArtistSongsHtml,
   parseSongSearchHtml,
 } from "../src/parser/search";
+import { renderSongResults } from "../src/render/search";
 
 async function fixture(name: string): Promise<string> {
   return readFile(new URL(`./fixtures/${name}`, import.meta.url), "utf8");
@@ -64,6 +65,25 @@ describe("parseArtistSongsHtml", () => {
       artist: "Soda Stereo",
       artistSlug: "soda_stereo",
       url: "https://acordes.lacuerda.net/soda_stereo/de_musica_ligera.shtml",
+    });
+  });
+
+  describe("renderSongResults", () => {
+    test("renders song metadata for the favorites list without hearts", () => {
+      const results = renderSongResults("prueba", [
+        {
+          title: "Canción de prueba",
+          artist: "Artista",
+          artistSlug: "artista",
+          url: "https://acordes.lacuerda.net/artista/cancion.shtml",
+        },
+      ]);
+
+      expect(results).toContain('data-song-id="/artista/cancion.shtml"');
+      expect(results).toContain('data-song-title="Canción de prueba"');
+      expect(results).toContain('data-song-artist="Artista"');
+      expect(results).not.toContain("data-favorite-toggle");
+      expect(results).not.toContain("favorite-filter");
     });
   });
 });
