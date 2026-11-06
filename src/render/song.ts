@@ -2,19 +2,7 @@ import type { ChordToken, SongLine } from "../parser/lacuerda";
 import type { SongState } from "../state";
 import { renderGuitarChordDiagram } from "../guitar/chords";
 import { transposeChord } from "../transpose/chords";
-
-function escapeHtml(value: string): string {
-  return value.replace(/[&<>"']/g, (character) => {
-    const entities: Record<string, string> = {
-      "&": "&amp;",
-      "<": "&lt;",
-      ">": "&gt;",
-      '"': "&quot;",
-      "'": "&#39;",
-    };
-    return entities[character]!;
-  });
-}
+import { escapeHtml } from "./html";
 
 function renderChordLine(chords: ChordToken[], offset: number): string {
   let output = "";
@@ -61,7 +49,7 @@ export function renderSong(state: SongState): string {
 
   return `<section class="song-card" aria-label="Canción transpuesta">
   <header class="song-header">
-    <div><p class="eyebrow">${escapeHtml(state.parsed.artist)}</p><h2>${escapeHtml(state.parsed.title)}</h2></div>
+    <div><p class="eyebrow">${escapeHtml(state.parsed.artist)}</p><h2 id="selected-song-title" tabindex="-1">${escapeHtml(state.parsed.title)}</h2></div>
     <a class="source-link" href="${escapeHtml(state.url)}" target="_blank" rel="noreferrer">Ver fuente</a>
   </header>
   <div class="song-controls" aria-label="Transponer canción">

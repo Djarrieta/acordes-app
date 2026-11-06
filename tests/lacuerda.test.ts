@@ -40,4 +40,17 @@ describe("parseLacuerdaHtml", () => {
       "No se encontró el bloque",
     );
   });
+
+  test("prefers the structured song header for title and artist", () => {
+    const html = `<div id=tH1><h1><a href='cancion'>Cuando pase el temblor</a></h1><h2><a href=./>Soda Stereo</a></h2></div>
+<div id=t_body><PRE>
+<A>C</A>
+Letra
+</PRE></div>`;
+
+    expect(parseLacuerdaHtml(html, fixtureUrl)).toMatchObject({
+      title: "Cuando pase el temblor",
+      artist: "Soda Stereo",
+    });
+  });
 });

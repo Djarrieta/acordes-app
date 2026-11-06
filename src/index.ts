@@ -1,6 +1,7 @@
 import { homePage } from "./routes/home";
 import { chordDiagramRoute } from "./routes/chord-diagram";
 import { loadRoute } from "./routes/load";
+import { artistRoute, searchRoute } from "./routes/search";
 import { resetRoute, transposeRoute } from "./routes/transpose";
 
 const port = Number(Bun.env.PORT ?? 4173);
@@ -16,6 +17,12 @@ Bun.serve({
 
     if (request.method === "GET" && pathname === "/") {
       return homePage();
+    }
+    if (request.method === "GET" && pathname === "/search") {
+      return searchRoute(request);
+    }
+    if (request.method === "GET" && pathname === "/artist") {
+      return artistRoute(request);
     }
     if (pathname === "/chord-diagram") {
       if (request.method === "GET") return chordDiagramRoute(request);
@@ -36,6 +43,12 @@ Bun.serve({
     if (request.method === "GET" && pathname === "/public/styles.css") {
       return new Response(Bun.file(new URL("../public/styles.css", import.meta.url)), {
         headers: { "Content-Type": "text/css; charset=utf-8" },
+      });
+    }
+    if (pathname === "/search" || pathname === "/artist") {
+      return new Response("Método no permitido.", {
+        status: 405,
+        headers: { Allow: "GET" },
       });
     }
     if (

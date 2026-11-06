@@ -45,7 +45,7 @@ function decodeEntities(value: string): string {
   );
 }
 
-function stripMarkup(value: string): string {
+export function stripMarkup(value: string): string {
   return decodeEntities(value.replace(/<[^>]*>/g, ""));
 }
 
@@ -72,6 +72,16 @@ function parseChordLine(line: string): ChordToken[] {
 }
 
 function pageMetadata(html: string, url: URL): Pick<ParsedSong, "title" | "artist"> {
+  const header =
+    /<div\b[^>]*id\s*=\s*(?:"tH1"|'tH1'|tH1)[^>]*>[\s\S]*?<h1\b[^>]*>([\s\S]*?)<\/h1>[\s\S]*?<h2\b[^>]*>([\s\S]*?)<\/h2>/i.exec(
+      html,
+    );
+  if (header) {
+    const title = stripMarkup(header[1]!).trim();
+    const artist = stripMarkup(header[2]!).trim();
+    if (title && artist) return { title, artist };
+  }
+
   const titleMatch = /<title\b[^>]*>([\s\S]*?)<\/title>/i.exec(html);
   const rawTitle = titleMatch ? stripMarkup(titleMatch[1]!).trim() : "";
   const normalizedTitle = rawTitle

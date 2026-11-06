@@ -23,7 +23,9 @@ El servidor lee `HOST` y `PORT` del entorno; sus valores predeterminados son `0.
 
 ## Uso
 
-Pega la URL HTTPS de una canción de `acordes.lacuerda.net`. Selecciona cualquier acorde de la letra para ver una digitación para guitarra. Usa los controles para transponer los acordes por semitonos o restaurar la tonalidad original. El estado de las canciones se conserva solo en memoria mientras el proceso está activo.
+Busca por nombre de canción o de artista directamente en LaCuerda y pulsa **Cargar** en el resultado. También puedes pegar la URL HTTPS de una canción en la sección **Cargar por enlace directo**. Selecciona cualquier acorde de la letra para ver una digitación para guitarra. Usa los controles para transponer los acordes por semitonos o restaurar la tonalidad original. El estado de las canciones se conserva solo en memoria mientras el proceso está activo.
+
+El buscador consulta el formulario público de LaCuerda (`busca.php`) y enlaza cada resultado con el archivo exacto de la canción. Si la búsqueda de canciones no encuentra resultados, cambia el selector a **Artistas** para localizar el artista y ver su listado de canciones.
 
 ## Pruebas y tipos
 
@@ -45,7 +47,7 @@ La aplicación quedará disponible en <http://127.0.0.1:4173>. Compose publica e
 
 ## Estructura
 
-- `src/parser/`: descarga y parsea canciones de LaCuerda.
+- `src/parser/`: descarga y parsea canciones y resultados de búsqueda de LaCuerda.
 - `src/transpose/`: transposición de acordes.
 - `src/guitar/`: generación de diagramas de digitación para guitarra.
 - `src/render/`: renderizado de HTML.
