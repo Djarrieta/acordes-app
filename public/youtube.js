@@ -151,10 +151,16 @@ function updateCurrentChord(section, video) {
   const activeChord = songCard?.querySelector(`[data-chord-index="${activeIndex}"]`);
   const activeLine = activeChord?.closest(".song-line");
   activeLine?.classList.add("is-current");
-  activeLine?.scrollIntoView({
-    block: "nearest",
-    behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth",
-  });
+  const lyrics = songCard?.querySelector(".song-lyrics");
+  if (activeLine instanceof HTMLElement && lyrics instanceof HTMLElement) {
+    const lineTop = activeLine.getBoundingClientRect().top
+      - lyrics.getBoundingClientRect().top
+      + lyrics.scrollTop;
+    lyrics.scrollTo({
+      top: lineTop - (lyrics.clientHeight - activeLine.offsetHeight) / 2,
+      behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth",
+    });
+  }
   void updateAccompanimentChord(section, activeChord);
 }
 
@@ -202,6 +208,7 @@ function initializePlayer(section, video) {
     }
   }
   const host = section.closest(".song-card")?.querySelector("[data-youtube-player]");
+  section.classList.toggle("has-video", Boolean(video));
   if (!host) return;
   host.replaceChildren();
   const element = document.createElement("div");

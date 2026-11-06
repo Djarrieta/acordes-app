@@ -7,9 +7,8 @@ describe("song wizard", () => {
     const page = await homePage().text();
 
     expect(page).toContain('aria-label="Pasos de la canción"');
-    expect(page).toContain('href="/public/styles.css?v=youtube-6"');
-    expect(page).toContain('src="/public/youtube.js?v=6"');
-    expect(page).toContain('src="/public/youtube.js?v=6"');
+    expect(page).toContain('href="/public/styles.css?v=youtube-7"');
+    expect(page).toContain('src="/public/youtube.js?v=7"');
     expect(page).toContain('data-wizard-step="2"');
     expect(page).toContain(">Busca</span>");
     expect(page).toContain(">Reproducir</span>");
@@ -35,6 +34,7 @@ describe("song wizard", () => {
     });
 
     expect(song).toContain('<h2 id="selected-song-title" tabindex="-1">Canción de prueba</h2>');
+    expect(song).toContain('class="song-back-button secondary" data-wizard-search');
     expect(song).toContain('data-favorite-toggle data-song-id="/artista/cancion.shtml"');
     expect(song).toContain('<svg aria-hidden="true" viewBox="0 0 24 24"');
     expect(song).toContain('aria-pressed="false"');

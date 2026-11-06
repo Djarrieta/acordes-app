@@ -7,9 +7,9 @@ export function homePage(): Response {
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="color-scheme" content="light">
   <title>Acordes — transpositor</title>
-  <link rel="stylesheet" href="/public/styles.css?v=youtube-6">
+  <link rel="stylesheet" href="/public/styles.css?v=youtube-7">
   <script src="https://unpkg.com/htmx.org@2.0.4"></script>
-  <script src="/public/youtube.js?v=6" defer></script>
+  <script src="/public/youtube.js?v=7" defer></script>
   <script>
     const FAVORITES_KEY = "acordes-liked-songs";
     const LEGACY_TRANSPOSITIONS_KEY = "acordes-song-transpositions";
@@ -37,12 +37,9 @@ export function homePage(): Response {
       updateWizard(2);
       document.getElementById("search-panel").hidden = true;
       target.hidden = false;
+      document.body.classList.add("is-song-view");
       if (event.detail.requestConfig?.path !== "/load") return;
       const title = target.querySelector("#selected-song-title");
-      document.querySelector(".song-wizard")?.scrollIntoView({
-        behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth",
-        block: "start"
-      });
       if (title instanceof HTMLElement) title.focus({ preventScroll: true });
     });
     document.addEventListener("htmx:beforeRequest", (event) => {
@@ -73,6 +70,7 @@ export function homePage(): Response {
         const songContainer = document.getElementById("song-container");
         if (searchPanel) searchPanel.hidden = false;
         if (songContainer) songContainer.hidden = true;
+        document.body.classList.remove("is-song-view");
         updateWizard(1);
         document.getElementById("search-query")?.focus();
       }
