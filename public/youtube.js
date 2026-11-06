@@ -155,6 +155,7 @@ function initializePlayer(section, video) {
     player.destroy();
     player = null;
     playerVideoId = null;
+    section.classList.remove("is-playing");
     highlightedChordIndex = null;
     if (playbackTimer !== null) {
       window.clearInterval(playbackTimer);
@@ -197,15 +198,19 @@ function initializePlayer(section, video) {
           || preferences.get(section.dataset.youtubeSong)?.videoId !== video.videoId
         ) return;
         if (event.data === window.YT.PlayerState.PLAYING) {
+          section.classList.add("is-playing");
           setStatus(section, markMode
             ? "Marcas activadas: pulsa el acorde que está sonando para guardar su tiempo."
             : "Reproduciendo. Abre este panel para activar las marcas de acordes.");
           if (playbackTimer !== null) window.clearInterval(playbackTimer);
           updateCurrentChord(section, video);
           playbackTimer = window.setInterval(() => updateCurrentChord(section, video), 250);
-        } else if (playbackTimer !== null) {
-          window.clearInterval(playbackTimer);
-          playbackTimer = null;
+        } else {
+          section.classList.remove("is-playing");
+          if (playbackTimer !== null) {
+            window.clearInterval(playbackTimer);
+            playbackTimer = null;
+          }
         }
       },
       onError(event) {
@@ -214,6 +219,7 @@ function initializePlayer(section, video) {
           || preferences.get(section.dataset.youtubeSong)?.videoId !== video.videoId
         ) return;
         console.error("Error del reproductor de YouTube:", event.data);
+        section.classList.remove("is-playing");
         setStatus(section, "No se pudo reproducir este video. Prueba con otro enlace.");
         if (playbackTimer !== null) {
           window.clearInterval(playbackTimer);
@@ -242,6 +248,7 @@ function initializeSection(section) {
   if (host) host.hidden = !video;
   if (!video) {
     setMarkMode(section, false);
+    section.classList.remove("is-playing");
     if (player) {
       if (player.destroy) player.destroy();
       player = null;
@@ -355,6 +362,7 @@ document.addEventListener("submit", async (event) => {
     });
     const saved = savePreferences();
     setMarkMode(section, false);
+    section.classList.remove("is-playing");
     if (playbackTimer !== null) {
       window.clearInterval(playbackTimer);
       playbackTimer = null;
@@ -415,6 +423,7 @@ document.addEventListener("click", (event) => {
   if (unlink) {
     const section = unlink.closest("[data-youtube-song]");
     setMarkMode(section, false);
+    section.classList.remove("is-playing");
     if (playbackTimer !== null) {
       window.clearInterval(playbackTimer);
       playbackTimer = null;

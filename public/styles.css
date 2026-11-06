@@ -898,7 +898,7 @@ h1 {
   white-space: nowrap;
 }
 
-.chord-trigger[data-chord-time] .chord-time-marker {
+.song-card > .youtube-section[open].is-marking:not(.is-playing) ~ .song-lyrics .chord-trigger[data-chord-time] .chord-time-marker {
   display: block;
 }
 
