@@ -7,6 +7,8 @@ describe("song wizard", () => {
     const page = await homePage().text();
 
     expect(page).toContain('aria-label="Pasos de la canción"');
+    expect(page).toContain('href="/public/styles.css?v=youtube-3"');
+    expect(page).toContain('src="/public/youtube.js?v=3"');
     expect(page).toContain('data-wizard-step="2"');
     expect(page).toContain(">Busca</span>");
     expect(page).toContain(">Reproducir</span>");
@@ -22,7 +24,11 @@ describe("song wizard", () => {
   test("renders the selected song title without revealing its source", () => {
     const song = renderSong({
       id: "song-id",
-      parsed: { title: "Canción de prueba", artist: "Artista", lines: [] },
+      parsed: {
+        title: "Canción de prueba",
+        artist: "Artista",
+        lines: [{ chords: [{ chord: "C", column: 0 }], lyric: "Letra de prueba" }],
+      },
       offset: 0,
       url: "https://acordes.lacuerda.net/artista/cancion.shtml",
     });
@@ -34,6 +40,13 @@ describe("song wizard", () => {
     expect(song).toContain('data-song-title="Canción de prueba"');
     expect(song).toContain('data-song-artist="Artista"');
     expect(song).toContain('data-song-id="/artista/cancion.shtml" data-offset="0"');
+    expect(song).toContain('data-youtube-song="/artista/cancion.shtml"');
+    expect(song).toContain('href="https://www.youtube.com/results?search_query=Artista%20Canci%C3%B3n%20de%20prueba"');
+    expect(song).toContain("<details class=\"youtube-section\"");
+    expect(song).not.toContain("<details class=\"youtube-section\" open");
+    expect(song).toContain('data-chord-mark-toggle aria-pressed="false"');
+    expect(song).toContain('data-chord-index="0"');
+    expect(song).not.toContain("data-lyric-mark");
     expect(song).not.toContain("source-link");
     expect(song).not.toContain("https://acordes.lacuerda.net/artista/cancion.shtml");
   });

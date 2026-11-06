@@ -50,7 +50,31 @@ describe("renderGuitarChordDiagram", () => {
     expect(html).toContain('<dialog id="chord-modal"');
     expect(html).toContain('hx-get="/chord-diagram?chord=Re"');
     expect(html).toContain('aria-label="Ver diagrama de Re"');
-    expect(html).toContain("\nLetra\n");
+    expect(html).toContain('data-lyric-index="0"');
+    expect(html).toContain('<span class="song-line-text"><span class="chords">');
+    expect(html).toContain(">Letra</span>");
+    expect(html).toContain('data-chord-index="0"');
+    expect(html).toContain('data-chord-name="Re"');
+  });
+
+  test("assigns an ordered marker target to each chord occurrence", () => {
+    const html = renderSong({
+      id: "song-id",
+      offset: 0,
+      url: "https://acordes.lacuerda.net/artista/cancion.shtml",
+      parsed: {
+        title: "Canción",
+        artist: "Artista",
+        lines: [
+          { chords: [{ chord: "C", column: 0 }, { chord: "G", column: 8 }], lyric: "Primera línea" },
+          { chords: [{ chord: "C", column: 0 }], lyric: "Segunda línea" },
+        ],
+      },
+    });
+
+    expect(html).toContain('data-chord-index="0" data-chord-name="Do"');
+    expect(html).toContain('data-chord-index="1" data-chord-name="Sol"');
+    expect(html).toContain('data-chord-index="2" data-chord-name="Do"');
   });
 
   test("serves selected voicing fragments and reports unknown chords", async () => {

@@ -4,24 +4,32 @@ import { renderGuitarChordDiagram } from "../guitar/chords";
 import { transposeChord } from "../transpose/chords";
 import { escapeHtml } from "./html";
 
-function renderChordLine(chords: ChordToken[], offset: number): string {
+function renderChordLine(chords: ChordToken[], offset: number, firstChordIndex: number): string {
   let output = "";
   let position = 0;
-  for (const token of chords) {
+  for (const [index, token] of chords.entries()) {
     const chord = transposeChord(token.chord, offset);
     const target = Math.max(token.column, position);
     output += " ".repeat(target - position);
-    output += `<button type="button" class="chord-trigger" aria-label="Ver diagrama de ${escapeHtml(chord)}" hx-get="/chord-diagram?chord=${encodeURIComponent(chord)}" hx-target="#chord-viewer" hx-swap="innerHTML">${escapeHtml(chord)}</button>`;
+    output += `<button type="button" class="chord-trigger" data-chord-index="${firstChordIndex + index}" data-chord-name="${escapeHtml(chord)}" aria-label="Ver diagrama de ${escapeHtml(chord)}" hx-get="/chord-diagram?chord=${encodeURIComponent(chord)}" hx-target="#chord-viewer" hx-swap="innerHTML">${escapeHtml(chord)}<span class="chord-time-marker" aria-hidden="true"></span></button>`;
     position = target + chord.length;
   }
   return output;
 }
 
-function renderSongLine(line: SongLine, offset: number): string {
-  if (line.chords.length === 0) {
-    return `${escapeHtml(line.lyric)}\n`;
-  }
-  return `<span class="chords">${renderChordLine(line.chords, offset)}</span>\n${escapeHtml(line.lyric)}\n`;
+function renderSongLine(
+  line: SongLine,
+  offset: number,
+  lineIndex: number,
+  firstChordIndex: number,
+): string {
+  const chordLine =
+    line.chords.length === 0
+      ? ""
+      : `<span class="chords">${renderChordLine(line.chords, offset, firstChordIndex)}</span><br>`;
+  return `<div class="song-line" data-lyric-index="${lineIndex}">
+    <span class="song-line-text">${chordLine}${escapeHtml(line.lyric)}</span>
+  </div>`;
 }
 
 function transpositionLabel(offset: number): string {
@@ -45,9 +53,15 @@ export function renderSong(state: SongState): string {
         `<button type="button" hx-post="/transpose" hx-vals='{"id":"${id}","delta":${delta}}' hx-target="#song-container" hx-swap="innerHTML">${label}</button>`,
     )
     .join("\n");
+  let chordIndex = 0;
   const lyrics = state.parsed.lines
-    .map((line) => renderSongLine(line, state.offset))
+    .map((line, lineIndex) => {
+      const rendered = renderSongLine(line, state.offset, lineIndex, chordIndex);
+      chordIndex += line.chords.length;
+      return rendered;
+    })
     .join("");
+  const searchQuery = encodeURIComponent(`${state.parsed.artist} ${state.parsed.title}`);
 
   return `<section class="song-card" aria-label="Canción transpuesta" data-song-id="${songId}" data-offset="${offset}">
   <header class="song-header">
@@ -59,6 +73,30 @@ export function renderSong(state: SongState): string {
     <button type="button" class="secondary" hx-post="/reset" hx-vals='{"id":"${id}"}' hx-target="#song-container" hx-swap="innerHTML">Original</button>
     <output class="transpose-status">${transpositionLabel(state.offset)}</output>
   </div>
+  <div class="youtube-playback youtube-player-frame" data-youtube-player hidden></div>
+  <details class="youtube-section" data-youtube-song="${songId}">
+    <summary class="youtube-summary">
+      <span><span class="eyebrow">Acompañamiento</span><strong>YouTube</strong></span>
+      <span class="youtube-summary-state" data-youtube-summary-state>Configurar audio y marcas</span>
+    </summary>
+    <div class="youtube-panel" aria-label="Opciones de acompañamiento">
+      <div class="youtube-header">
+        <p>Vincula un video para escuchar la canción mientras ves los acordes.</p>
+        <a class="youtube-search-link" href="https://www.youtube.com/results?search_query=${searchQuery}" target="_blank" rel="noopener noreferrer">Buscar en YouTube</a>
+      </div>
+    <form class="youtube-link-form">
+      <label for="youtube-url">Pega el enlace del video</label>
+      <div class="youtube-link-row">
+        <input id="youtube-url" name="url" type="url" inputmode="url" placeholder="https://www.youtube.com/watch?v=…" autocomplete="url" required>
+        <button type="submit">Vincular video</button>
+      </div>
+      <button type="button" class="youtube-unlink secondary" data-youtube-unlink hidden>Quitar video</button>
+      <p class="youtube-status" data-youtube-status role="status" aria-live="polite">Busca un video, copia su enlace y pégalo aquí.</p>
+    </form>
+    <button type="button" class="chord-mark-toggle" data-chord-mark-toggle aria-pressed="false" disabled>Activar marcas de acordes</button>
+    <p class="youtube-help">Con las marcas activadas, pulsa cada acorde mientras suena para asignarle el tiempo actual. Al cerrar este panel, los acordes vuelven a abrir sus diagramas.</p>
+    </div>
+  </details>
   <dialog id="chord-modal" class="chord-modal" aria-labelledby="chord-modal-title">
     <div class="chord-modal-content">
       <header class="chord-modal-header">
@@ -70,7 +108,7 @@ export function renderSong(state: SongState): string {
       </div>
     </div>
   </dialog>
-  <pre class="song">${lyrics}</pre>
+  <div class="song song-lyrics" aria-label="Letra y acordes">${lyrics}</div>
 </section>`;
 }
 

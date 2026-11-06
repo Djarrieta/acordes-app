@@ -483,6 +483,185 @@ h1 {
   background: #f2efe8;
 }
 
+.youtube-section {
+  border-top: 1px solid #ece8de;
+  background: #fffefa;
+}
+
+.youtube-summary {
+  display: flex;
+  min-height: 4rem;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  cursor: pointer;
+  list-style: none;
+  padding: 0.75rem 1.5rem;
+}
+
+.youtube-summary::-webkit-details-marker {
+  display: none;
+}
+
+.youtube-summary::after {
+  color: #52705c;
+  content: "+";
+  font-size: 1.35rem;
+  font-weight: 700;
+}
+
+.youtube-section[open] .youtube-summary::after {
+  content: "−";
+}
+
+.youtube-summary > span:first-child {
+  display: grid;
+  gap: 0.2rem;
+}
+
+.youtube-summary .eyebrow {
+  margin: 0;
+}
+
+.youtube-summary strong {
+  font-size: 1rem;
+}
+
+.youtube-summary-state {
+  margin-left: auto;
+  color: #66625a;
+  font-size: 0.8rem;
+  text-align: right;
+}
+
+.youtube-panel {
+  border-top: 1px solid #ece8de;
+  padding: 1.1rem 1.5rem 1.25rem;
+}
+
+.youtube-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.youtube-header p {
+  margin: 0;
+  color: #66625a;
+  font-size: 0.86rem;
+}
+
+.youtube-search-link {
+  color: #24543c;
+  font-size: 0.88rem;
+  font-weight: 700;
+}
+
+.youtube-link-form {
+  display: grid;
+  gap: 0.45rem;
+  margin-bottom: 1rem;
+}
+
+.youtube-link-form label {
+  font-size: 0.88rem;
+  font-weight: 700;
+}
+
+.youtube-link-row {
+  display: flex;
+  gap: 0.6rem;
+}
+
+.youtube-link-row input {
+  min-width: 0;
+  flex: 1;
+  border: 1px solid #d6d1c6;
+  border-radius: 0.65rem;
+  background: white;
+  padding: 0.7rem 0.8rem;
+}
+
+.youtube-link-row button,
+.youtube-unlink {
+  flex-shrink: 0;
+  padding: 0.65rem 0.8rem;
+  font-size: 0.84rem;
+}
+
+.youtube-unlink.secondary {
+  justify-self: start;
+  border: 1px solid #d6d1c6;
+  background: transparent;
+  color: #3e3a34;
+}
+
+.youtube-unlink.secondary:hover {
+  background: #f2efe8;
+}
+
+.youtube-status,
+.youtube-help {
+  margin: 0;
+  color: #66625a;
+  font-size: 0.82rem;
+  line-height: 1.5;
+}
+
+.youtube-playback {
+  justify-content: center;
+  border-top: 1px solid #ece8de;
+  background: #fcfaf5;
+  padding: 1rem;
+}
+
+.youtube-playback[hidden] {
+  display: none;
+}
+
+.youtube-player-frame {
+  overflow: hidden;
+  width: min(100%, 18rem);
+  height: 12.5rem;
+  border-radius: 0.75rem;
+  background: #242323;
+}
+
+.youtube-player-frame:empty {
+  display: none;
+}
+
+.youtube-player-frame iframe {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.chord-mark-toggle {
+  margin-top: 0.6rem;
+  border: 1px solid #d6d1c6;
+  background: #fffefa;
+  color: #3e3a34;
+  font-size: 0.88rem;
+}
+
+.chord-mark-toggle[aria-pressed="true"] {
+  border-color: #2f684d;
+  background: #e8f0ea;
+  color: #24543c;
+}
+
+.chord-mark-toggle:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.youtube-help {
+  margin-top: 0.85rem;
+}
+
 .chord-modal {
   width: min(27rem, calc(100% - 2rem));
   max-width: none;
@@ -671,6 +850,7 @@ h1 {
 }
 
 .chord-trigger {
+  position: relative;
   border: 0;
   border-radius: 0;
   background: transparent;
@@ -685,6 +865,50 @@ h1 {
 .chord-trigger:hover {
   background: #f5e8d9;
   color: #743719;
+}
+
+.chord-trigger.is-current {
+  border-radius: 0.2rem;
+  background: #f3d996;
+  color: #59351b;
+  box-shadow: 0 0 0 2px #dfa437;
+}
+
+.chord-trigger.is-marking {
+  border-radius: 0.2rem;
+  background: #e8f0ea;
+  box-shadow: 0 0 0 1px #5b8069;
+}
+
+.chord-time-marker {
+  position: absolute;
+  z-index: 1;
+  top: -1.05rem;
+  left: 50%;
+  display: none;
+  border-radius: 0.25rem;
+  background: #24543c;
+  color: white;
+  font-family: Inter, ui-sans-serif, system-ui, sans-serif;
+  font-size: 0.58rem;
+  font-weight: 650;
+  line-height: 1.2;
+  padding: 0.1rem 0.22rem;
+  transform: translateX(-50%);
+  white-space: nowrap;
+}
+
+.chord-trigger[data-chord-time] .chord-time-marker {
+  display: block;
+}
+
+.song-line.is-current {
+  border-radius: 0.2rem;
+  background: #f7f0dc;
+}
+
+.youtube-section[open].is-marking .chord-trigger[data-chord-index] {
+  cursor: crosshair;
 }
 
 .chord-trigger:focus-visible {
@@ -719,6 +943,10 @@ h1 {
   font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
   font-size: 0.95rem;
   line-height: 1.55;
+}
+
+.song-line-text {
+  min-height: 1.55em;
   white-space: pre;
 }
 
@@ -807,6 +1035,41 @@ h1 {
 
   .song-controls {
     padding-inline: 1rem;
+  }
+
+  .youtube-section {
+    padding-inline: 0;
+  }
+
+  .youtube-summary {
+    padding-inline: 1rem;
+  }
+
+  .youtube-panel {
+    padding-inline: 1rem;
+  }
+
+  .youtube-link-row {
+    flex-direction: column;
+  }
+
+  .youtube-link-row button {
+    width: 100%;
+  }
+
+  .youtube-header {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .youtube-player-frame {
+    width: 100%;
+    height: min(56.25vw, 12.5rem);
+    min-height: 12.5rem;
+  }
+
+  .chord-mark-toggle {
+    width: 100%;
   }
 
   .song {
