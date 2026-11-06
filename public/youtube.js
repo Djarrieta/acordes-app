@@ -13,6 +13,8 @@ let markMode = false;
 let playbackTimer = null;
 let highlightedChordIndex = null;
 let chordDiagramRequest = 0;
+let requestedAccompanimentChord = "";
+const chordDiagramCache = new Map();
 
 function readPreferences() {
   try {
@@ -167,24 +169,41 @@ function updateCurrentChord(section, video) {
 async function updateAccompanimentChord(section, chord) {
   const target = section.closest(".song-card")?.querySelector("#accompaniment-chord-viewer");
   if (!target) return;
-  const requestId = ++chordDiagramRequest;
   if (!chord) {
+    chordDiagramRequest += 1;
+    requestedAccompanimentChord = "";
     target.innerHTML = '<p class="accompaniment-chord-placeholder">Aún no hay un acorde marcado en este punto del video.</p>';
     return;
   }
+  const chordName = chord.dataset.chordName;
+  const displayedChord = target.querySelector(".chord-diagram h3")?.textContent;
+  if (displayedChord === chordName) {
+    chordDiagramRequest += 1;
+    requestedAccompanimentChord = "";
+    return;
+  }
+  if (requestedAccompanimentChord === chordName) return;
+  const requestId = ++chordDiagramRequest;
+  requestedAccompanimentChord = chordName;
   try {
-    const url = new URL("/chord-diagram", window.location.origin);
-    url.searchParams.set("chord", chord.dataset.chordName);
-    url.searchParams.set("target", "accompaniment-chord-viewer");
-    const response = await fetch(url);
-    const html = await response.text();
-    if (!response.ok) throw new Error(`HTTP ${response.status}: ${html}`);
+    let html = chordDiagramCache.get(chordName);
+    if (!html) {
+      const url = new URL("/chord-diagram", window.location.origin);
+      url.searchParams.set("chord", chordName);
+      url.searchParams.set("target", "accompaniment-chord-viewer");
+      const response = await fetch(url);
+      html = await response.text();
+      if (!response.ok) throw new Error(`HTTP ${response.status}: ${html}`);
+      chordDiagramCache.set(chordName, html);
+    }
     if (requestId !== chordDiagramRequest || activeSection !== section) return;
     target.innerHTML = html;
+    requestedAccompanimentChord = "";
     window.htmx?.process(target);
   } catch (error) {
     if (requestId !== chordDiagramRequest || activeSection !== section) return;
     console.error("No se pudo actualizar el diagrama del acorde actual:", error);
+    requestedAccompanimentChord = "";
     target.innerHTML = '<p class="accompaniment-chord-placeholder">No se pudo mostrar la digitación de este acorde.</p>';
   }
 }

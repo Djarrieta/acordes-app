@@ -242,12 +242,12 @@ export function renderGuitarChordDiagram(
 
   const positionOptions =
     voicings.length > 1
-      ? `<nav class="voicing-options" aria-label="Variantes de digitación">${voicings
+      ? `<label class="voicing-options"><span>Digitación</span><select class="voicing-choice" name="position" aria-label="Variante de digitación" hx-get="/chord-diagram?chord=${encodeURIComponent(chordName)}&amp;target=${targetId}" hx-target="#${targetId}" hx-swap="innerHTML">${voicings
           .map(
             (voicing, index) =>
-                `<button type="button" class="voicing-choice" aria-pressed="${index === selectedPosition}" hx-get="/chord-diagram?chord=${encodeURIComponent(chordName)}&amp;position=${index}&amp;target=${targetId}" hx-target="#${targetId}" hx-swap="innerHTML">${index + 1} · ${escapeHtml(positionLabel(voicing))}</button>`,
+              `<option value="${index}"${index === selectedPosition ? " selected" : ""}>${index + 1} · ${escapeHtml(positionLabel(voicing))}</option>`,
           )
-          .join("")}</nav>`
+          .join("")}</select></label>`
       : "";
 
   return `${positionOptions}${renderDiagram(chordName, voicings[selectedPosition]!)}`;

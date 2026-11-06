@@ -28,10 +28,11 @@ describe("renderGuitarChordDiagram", () => {
 
   test("offers multiple database positions ordered for easier play", () => {
     const html = renderGuitarChordDiagram("Fa");
-    expect(html).toContain('aria-pressed="true"');
-    expect(html).toContain("1 · Cejilla · traste 1");
-    expect(html).toContain("Cejilla");
-    expect(renderGuitarChordDiagram("Fa", 1)).toContain('aria-pressed="false"');
+    expect(html).toContain('aria-label="Variante de digitación"');
+    expect(html).toContain('<option value="0" selected>1 · Cejilla · traste 1</option>');
+    expect(html).toContain('<option value="1"');
+    expect(renderGuitarChordDiagram("Fa", 1)).toContain('<option value="1" selected>');
+    expect(html).not.toContain('class="voicing-choice" aria-pressed=');
   });
 
   test("makes the displayed, transposed chord selectable in the song", () => {
@@ -99,7 +100,7 @@ describe("renderGuitarChordDiagram", () => {
       new Request("http://localhost/chord-diagram?chord=Fa&position=1"),
     );
     expect(selected.status).toBe(200);
-    expect(await selected.text()).toContain('aria-pressed="false"');
+    expect(await selected.text()).toContain('<option value="1" selected>');
 
     const unsupported = chordDiagramRoute(
       new Request("http://localhost/chord-diagram?chord=N.C."),
