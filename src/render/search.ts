@@ -3,7 +3,7 @@ import { escapeHtml } from "./html";
 
 function loadButton(song: SongMatch): string {
   const url = escapeHtml(song.url);
-  return `<button class="result-action" type="button" aria-label="Cargar ${escapeHtml(song.title)}" hx-post="/load" hx-vals='{"url":"${url}"}' hx-target="#song-container" hx-swap="innerHTML">Cargar canción</button>`;
+  return `<button class="result-action" type="button" aria-label="Reproducir ${escapeHtml(song.title)}" hx-post="/load" hx-vals='{"url":"${url}"}' hx-target="#song-container" hx-swap="innerHTML">Reproducir</button>`;
 }
 
 function songListItem(song: SongMatch): string {
@@ -58,5 +58,5 @@ export function renderArtistSongs(result: ArtistSongs): string {
 }
 
 export function renderSearchPrompt(): string {
-  return `<p class="empty">Escribe el nombre de una canción o de un artista para buscar en LaCuerda.</p>`;
+  return `<p class="empty">Escribe el nombre de una canción o de un artista para buscar.</p>`;
 }

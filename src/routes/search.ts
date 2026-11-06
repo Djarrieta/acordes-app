@@ -23,8 +23,8 @@ function html(body: string, status = 200): Response {
 function errorResponse(error: unknown): Response {
   const known = error instanceof LacuerdaParseError || error instanceof LacuerdaFetchError;
   const message = known
-    ? error.message
-    : "No se pudo conectar con LaCuerda. Inténtalo de nuevo más tarde.";
+    ? "No fue posible mostrar los resultados. Inténtalo de nuevo más tarde."
+    : "No se pudo completar la búsqueda. Inténtalo de nuevo más tarde.";
   const status = error instanceof LacuerdaParseError ? 400 : 502;
   return html(renderError(message), status);
 }

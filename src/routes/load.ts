@@ -32,8 +32,8 @@ export async function loadRoute(request: Request): Promise<Response> {
     console.error("Error al cargar una canción de LaCuerda:", error);
     const message =
       error instanceof LacuerdaParseError || error instanceof LacuerdaFetchError
-        ? error.message
-        : "No se pudo conectar con LaCuerda. Inténtalo de nuevo más tarde.";
+        ? "No fue posible reproducir esta canción. Inténtalo de nuevo más tarde."
+        : "No se pudo reproducir la canción. Inténtalo de nuevo más tarde.";
     return new Response(renderError(message), {
       status: error instanceof LacuerdaParseError ? 400 : 502,
       headers: { "Content-Type": "text/html; charset=utf-8" },

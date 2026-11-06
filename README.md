@@ -1,6 +1,6 @@
 # Acordes — transpositor
 
-Aplicación web personal para cargar canciones de [LaCuerda](https://acordes.lacuerda.net), mostrar sus letras con los acordes alineados y transponerlos a notación latina (Do, Re, Mi, Fa, Sol, La, Si).
+Aplicación web personal para buscar canciones, mostrar sus letras con los acordes alineados y transponerlos a notación latina (Do, Re, Mi, Fa, Sol, La, Si).
 
 ## Requisitos
 
@@ -23,9 +23,9 @@ El servidor lee `HOST` y `PORT` del entorno; sus valores predeterminados son `0.
 
 ## Uso
 
-Busca por nombre de canción o de artista directamente en LaCuerda y pulsa **Cargar** en el resultado. También puedes pegar la URL HTTPS de una canción en la sección **Cargar por enlace directo**. Selecciona cualquier acorde de la letra para ver una digitación para guitarra. Usa los controles para transponer los acordes por semitonos o restaurar la tonalidad original. El estado de las canciones se conserva solo en memoria mientras el proceso está activo.
+Busca por nombre de canción o de artista y pulsa **Reproducir** en el resultado. La búsqueda inicial muestra canciones para “De música ligera”. Selecciona cualquier acorde de la letra para ver una digitación para guitarra. Usa los controles para transponer los acordes por semitonos o restaurar la tonalidad original. Pulsa **Busca** para volver al buscador. El estado de las canciones se conserva solo en memoria mientras el proceso está activo.
 
-El buscador consulta el formulario público de LaCuerda (`busca.php`) y enlaza cada resultado con el archivo exacto de la canción. Si la búsqueda de canciones no encuentra resultados, cambia el selector a **Artistas** para localizar el artista y ver su listado de canciones.
+El buscador enlaza cada resultado con la canción correspondiente. Si la búsqueda de canciones no encuentra resultados, cambia el selector a **Artistas** para localizar el artista y ver su listado de canciones.
 
 ## Pruebas y tipos
 
@@ -47,7 +47,7 @@ La aplicación quedará disponible en <http://127.0.0.1:4173>. Compose publica e
 
 ## Estructura
 
-- `src/parser/`: descarga y parsea canciones y resultados de búsqueda de LaCuerda.
+- `src/parser/`: descarga y parsea canciones y resultados de búsqueda.
 - `src/transpose/`: transposición de acordes.
 - `src/guitar/`: generación de diagramas de digitación para guitarra.
 - `src/render/`: renderizado de HTML.

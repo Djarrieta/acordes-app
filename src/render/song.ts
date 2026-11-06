@@ -50,7 +50,6 @@ export function renderSong(state: SongState): string {
   return `<section class="song-card" aria-label="Canción transpuesta">
   <header class="song-header">
     <div><p class="eyebrow">${escapeHtml(state.parsed.artist)}</p><h2 id="selected-song-title" tabindex="-1">${escapeHtml(state.parsed.title)}</h2></div>
-    <a class="source-link" href="${escapeHtml(state.url)}" target="_blank" rel="noreferrer">Ver fuente</a>
   </header>
   <div class="song-controls" aria-label="Transponer canción">
     ${controls}

@@ -95,7 +95,7 @@ h1 {
 
 .wizard-steps {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 0.6rem;
   margin: 0;
   padding: 0;
@@ -115,6 +115,29 @@ h1 {
   font-size: 0.85rem;
   font-weight: 650;
   transition: background 120ms ease, border-color 120ms ease, color 120ms ease;
+}
+
+.wizard-step-button,
+.wizard-step-label {
+  display: flex;
+  width: 100%;
+  min-width: 0;
+  align-items: center;
+  gap: 0.6rem;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-weight: inherit;
+  padding: 0;
+  text-align: left;
+  box-shadow: none;
+}
+
+.wizard-step-button:hover {
+  background: transparent;
+  box-shadow: none;
 }
 
 .wizard-number {
@@ -190,21 +213,6 @@ h1 {
 .search-form label {
   margin-bottom: 0.25rem;
   font-size: 1.02rem;
-}
-
-.search-description,
-.search-hint {
-  margin: 0;
-  color: #817c72;
-  font-size: 0.85rem;
-}
-
-.search-description {
-  margin-bottom: 1rem;
-}
-
-.search-hint {
-  margin-top: 0.8rem;
 }
 
 .form-row {
@@ -367,52 +375,6 @@ h1 {
   padding: 1rem 1.1rem;
 }
 
-.url-fallback {
-  margin-top: 1rem;
-  border: 1px solid #e4dfd4;
-  border-radius: 0.85rem;
-  background: rgb(255 254 250 / 55%);
-  color: #66625a;
-  font-size: 0.88rem;
-}
-
-.url-fallback summary {
-  cursor: pointer;
-  font-weight: 650;
-  list-style: none;
-  padding: 0.95rem 1.1rem;
-}
-
-.url-fallback summary::-webkit-details-marker {
-  display: none;
-}
-
-.url-fallback summary::after {
-  float: right;
-  color: #52705c;
-  content: "+";
-  font-size: 1.1rem;
-  line-height: 1;
-}
-
-.url-fallback[open] summary::after {
-  content: "−";
-}
-
-.url-fallback[open] summary {
-  border-bottom: 1px solid #e4dfd4;
-}
-
-.url-fallback:focus-within {
-  border-color: #bdcdbf;
-}
-
-.url-fallback .load-form {
-  margin: 0.75rem;
-  padding: 1rem;
-  box-shadow: none;
-}
-
 #song-container {
   margin-top: 1.5rem;
 }
@@ -441,13 +403,6 @@ h1 {
   margin-bottom: 0;
   font-size: clamp(1.45rem, 4vw, 2rem);
   letter-spacing: -0.035em;
-}
-
-.source-link {
-  color: #38664c;
-  font-size: 0.85rem;
-  font-weight: 650;
-  white-space: nowrap;
 }
 
 .song-controls {
@@ -726,24 +681,22 @@ h1 {
   padding: 0.9rem 1rem;
 }
 
-footer {
-  margin-top: 2rem;
-  color: #817c72;
-  font-size: 0.8rem;
-  text-align: center;
-}
-
 @media (max-width: 600px) {
   .wizard-steps {
     gap: 0.35rem;
   }
 
   .wizard-steps li {
+    padding: 0.55rem 0.25rem;
+    font-size: 0.72rem;
+    text-align: center;
+  }
+
+  .wizard-step-button,
+  .wizard-step-label {
     flex-direction: column;
     justify-content: center;
     gap: 0.35rem;
-    padding: 0.55rem 0.25rem;
-    font-size: 0.72rem;
     text-align: center;
   }
 
@@ -775,10 +728,6 @@ footer {
   .result-action {
     padding-inline: 0.6rem;
     font-size: 0.78rem;
-  }
-
-  .url-fallback .form-row {
-    flex-direction: column;
   }
 
   .song-header {
