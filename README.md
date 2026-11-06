@@ -54,4 +54,6 @@ La aplicación quedará disponible en <http://127.0.0.1:4173>. Compose publica e
 - `public/`: estilos de la interfaz.
 - `tests/`: pruebas del parser y la transposición.
 
+Las digitaciones conocidas se basan en una selección de [tombatossals/chords-db](https://github.com/tombatossals/chords-db) (commit `df06fa7`), distribuida bajo MIT. Se conservan sus posiciones y atribución en `src/guitar/`; cuando no hay una forma en la base no se inventa una digitación. Las variantes disponibles se ordenan priorizando posiciones abiertas, cejillas parciales y trastes bajos.
+
 La interfaz carga HTMX desde un CDN. La aplicación no incluye autenticación; no la expongas a redes públicas sin añadir controles de acceso.

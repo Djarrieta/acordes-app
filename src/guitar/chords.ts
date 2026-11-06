@@ -1,3 +1,25 @@
+import chordDatabase from "./voicings.json";
+
+type GuitarVoicing = {
+  frets: number[];
+  fingers: number[];
+  barres: number[];
+  baseFret: number;
+  midi: number[];
+};
+
+type GuitarDatabase = {
+  roots: Record<string, Record<string, GuitarVoicing[]>>;
+};
+
+type ParsedNote = { pitch: number };
+type ParsedChord = {
+  root: ParsedNote;
+  bass: ParsedNote | null;
+  suffix: string;
+};
+
+const database: GuitarDatabase = chordDatabase;
 const NOTE_VALUES: Record<string, number> = {
   C: 0,
   D: 2,
@@ -7,7 +29,6 @@ const NOTE_VALUES: Record<string, number> = {
   A: 9,
   B: 11,
 };
-
 const LATIN_NOTES: Record<string, string> = {
   DO: "C",
   RE: "D",
@@ -17,63 +38,39 @@ const LATIN_NOTES: Record<string, string> = {
   LA: "A",
   SI: "B",
 };
-
-const OPEN_STRINGS = [40, 45, 50, 55, 59, 64];
+const ROOTS_BY_PITCH = ["C", "C#", "D", "Eb", "E", "F", "F#", "G", "Ab", "A", "Bb", "B"];
+const CHORD_QUALITIES: Record<string, string> = {
+  "": "major",
+  maj: "major",
+  major: "major",
+  m: "minor",
+  min: "minor",
+  minor: "minor",
+  "7": "7",
+  maj7: "maj7",
+  major7: "maj7",
+  m7: "m7",
+  min7: "m7",
+  minor7: "m7",
+  "6": "6",
+  m6: "m6",
+  sus: "sus",
+  sus2: "sus2",
+  sus4: "sus4",
+  dim: "dim",
+  dim7: "dim7",
+  m7b5: "m7b5",
+  add9: "add9",
+  madd9: "madd9",
+  "9": "9",
+  m9: "m9",
+  maj9: "maj9",
+  major9: "maj9",
+  aug: "aug",
+  "+": "aug",
+};
 const STRING_NAMES = ["E", "A", "D", "G", "B", "e"];
-const FRET_COUNT = 5;
-const SUPPORTED_SUFFIXES = new Set([
-  "",
-  "m",
-  "min",
-  "minor",
-  "maj",
-  "major",
-  "7",
-  "maj7",
-  "major7",
-  "m7",
-  "min7",
-  "minor7",
-  "6",
-  "m6",
-  "min6",
-  "9",
-  "maj9",
-  "major9",
-  "m9",
-  "min9",
-  "add9",
-  "madd9",
-  "sus",
-  "sus2",
-  "sus4",
-  "7sus2",
-  "7sus4",
-  "dim",
-  "dim7",
-  "°",
-  "°7",
-  "ø",
-  "ø7",
-  "m7b5",
-  "aug",
-  "aug7",
-  "+",
-  "7b5",
-  "7#5",
-  "7b9",
-  "7#9",
-  "11",
-  "m11",
-  "maj11",
-  "13",
-  "m13",
-  "maj13",
-]);
-
-type ParsedNote = { pitch: number; label: string };
-type ParsedChord = { root: ParsedNote; bass: ParsedNote | null; intervals: number[] };
-type Position = { fret: number | null; pitch: number };
+const FRET_COUNT = 4;
 
 function escapeHtml(value: string): string {
   return value.replace(/[&<>"']/g, (character) => {
@@ -99,193 +96,162 @@ function parseNote(value: string): ParsedNote | null {
   );
   return {
     pitch: ((NOTE_VALUES[name]! + accidental) % 12 + 12) % 12,
-    label: value,
   };
-}
-
-function chordIntervals(suffix: string): number[] | null {
-  const quality = suffix.toLowerCase();
-  if (!SUPPORTED_SUFFIXES.has(quality)) return null;
-  let intervals: number[];
-
-  if (quality.includes("ø")) {
-    intervals = [0, 3, 6, 10];
-  } else if (quality.includes("dim") || quality.includes("°")) {
-    intervals = quality.includes("7") ? [0, 3, 6, 9] : [0, 3, 6];
-  } else if (quality.includes("aug") || quality.includes("+")) {
-    intervals = [0, 4, 8];
-  } else if (quality.includes("sus2")) {
-    intervals = [0, 2, 7];
-  } else if (quality === "sus" || quality.includes("sus4")) {
-    intervals = [0, 5, 7];
-  } else if (/^(m|min|minor)/.test(quality)) {
-    intervals = [0, 3, 7];
-  } else {
-    intervals = [0, 4, 7];
-  }
-
-  if (/maj(?:or)?(?:7|9|11|13)/.test(quality)) {
-    intervals.push(11);
-  } else if (
-    !quality.includes("dim") &&
-    !quality.includes("°") &&
-    !quality.includes("ø") &&
-    quality.includes("7")
-  ) {
-    intervals.push(10);
-  }
-  if (quality.includes("6")) intervals.push(9);
-  if (quality.includes("9")) intervals.push(quality.includes("b9") ? 1 : quality.includes("#9") ? 3 : 2);
-  if (quality.includes("11")) intervals.push(5);
-  if (quality.includes("13")) intervals.push(9);
-  if (quality.includes("b5")) {
-    intervals = intervals.filter((interval) => interval !== 7);
-    intervals.push(6);
-  }
-  if (quality.includes("#5")) {
-    intervals = intervals.filter((interval) => interval !== 7);
-    intervals.push(8);
-  }
-
-  return [...new Set(intervals)];
 }
 
 function parseChord(value: string): ParsedChord | null {
   if (value.length > 32) return null;
-  const match = /^(DO|RE|MI|FA|SOL|LA|SI|[A-G])([#b]{0,2})([^/]*)(?:\/((?:DO|RE|MI|FA|SOL|LA|SI|[A-G])[#b]{0,2}))?$/i.exec(
-    value,
-  );
+  const match =
+    /^(DO|RE|MI|FA|SOL|LA|SI|[A-G])([#b]{0,2})([^/]*)(?:\/((?:DO|RE|MI|FA|SOL|LA|SI|[A-G])[#b]{0,2}))?$/i.exec(
+      value,
+    );
   if (!match) return null;
 
   const root = parseNote(`${match[1]}${match[2]}`);
   const bass = match[4] ? parseNote(match[4]) : null;
-  const intervals = chordIntervals(match[3]!);
-  if (!root || (match[4] && !bass) || !intervals) return null;
-  return { root, bass, intervals };
+  if (!root || (match[4] && !bass)) return null;
+  return { root, bass, suffix: match[3]!.toLowerCase() };
 }
 
-function findVoicing(chord: ParsedChord): (number | null)[] | null {
-  const choices = OPEN_STRINGS.map((openPitch) => [
-    { fret: null, pitch: -1 },
-    ...Array.from({ length: 8 }, (_, fret) => ({ fret, pitch: openPitch + fret })),
-  ]);
-  const required = new Set([0]);
-  const bassInterval = chord.bass
-    ? (chord.bass.pitch - chord.root.pitch + 12) % 12
-    : null;
-  const third = chord.intervals.includes(3) ? 3 : chord.intervals.includes(4) ? 4 : chord.intervals.includes(2) ? 2 : 5;
-  required.add(third);
-  const seventh = chord.intervals.find((interval) => [9, 10, 11].includes(interval));
-  if (seventh !== undefined && chord.intervals.length > 3) required.add(seventh);
+function voicingScore(voicing: GuitarVoicing): number {
+  const fingers = new Set(voicing.fingers.filter((finger) => finger > 0));
+  const barreStrings = voicing.barres.reduce(
+    (total, finger) => total + voicing.fingers.filter((value) => value === finger).length,
+    0,
+  );
+  const mutedStrings = voicing.frets.filter((fret) => fret < 0).length;
+  const openStrings = voicing.frets.filter((fret) => fret === 0).length;
+  const highestFret = Math.max(...voicing.frets);
+  return (
+    (voicing.baseFret - 1) * 1.4 +
+    voicing.barres.length * 2 +
+    barreStrings * 0.5 +
+    fingers.size * 1.3 +
+    mutedStrings * 0.25 -
+    openStrings * 0.8 +
+    highestFret * 0.3
+  );
+}
 
-  let best: (number | null)[] | null = null;
-  let bestScore = Number.POSITIVE_INFINITY;
-  const current: Position[] = [];
+function getVoicings(chordName: string): GuitarVoicing[] | null {
+  const chord = parseChord(chordName);
+  if (!chord) return null;
 
-  function search(string: number, tones: Set<number>): void {
-    if (string === OPEN_STRINGS.length) {
-      const sounding = current.filter((position) => position.fret !== null);
-      if (sounding.length < 4 || ![...required].every((interval) => tones.has(interval))) return;
-      const pitches = current.filter((position) => position.fret !== null).map((position) => position.pitch);
-      const lowest = Math.min(...pitches);
-      if (chord.bass && lowest % 12 !== chord.bass.pitch) return;
+  const root = ROOTS_BY_PITCH[chord.root.pitch]!;
+  const quality = CHORD_QUALITIES[chord.suffix];
+  if (!quality) return null;
+  const voicings = database.roots[root]?.[quality];
+  if (!voicings) return null;
 
-      const frets = sounding.map((position) => position.fret!);
-      const frettedPositions = frets.filter((fret) => fret > 0);
-      if (
-        frettedPositions.length > 0 &&
-        Math.max(...frettedPositions) - Math.min(...frettedPositions) >= FRET_COUNT
-      ) {
-        return;
-      }
-      const fretted = frets.filter((fret) => fret > 0);
-      const uniqueFrets = new Set(fretted);
-      const nonOpen = frets.filter((fret) => fret > 0).length;
-      const score =
-        [...frets].reduce((total, fret) => total + fret, 0) +
-        Math.max(...frets) * 1.5 +
-        uniqueFrets.size * 2 +
-        (6 - sounding.length) * 1.5 +
-        Math.max(0, nonOpen - 4) * 3;
-      if (score < bestScore) {
-        bestScore = score;
-        best = current.map((position) => position.fret);
-      }
-      return;
-    }
-
-    for (const option of choices[string]!) {
-      if (option.fret !== null) {
-        const interval = ((option.pitch % 12) - chord.root.pitch + 12) % 12;
-        if (!chord.intervals.includes(interval) && interval !== bassInterval) continue;
-        current.push(option);
-        const nextTones = new Set(tones);
-        nextTones.add(interval);
-        search(string + 1, nextTones);
-        current.pop();
-      } else {
-        current.push(option);
-        search(string + 1, tones);
-        current.pop();
-      }
-    }
+  let matchingBass = voicings;
+  if (chord.bass) {
+    matchingBass = voicings.filter((voicing) => {
+      const lowestNote = Math.min(...voicing.midi);
+      return lowestNote % 12 === chord.bass!.pitch;
+    });
   }
-
-  search(0, new Set());
-  return best;
+  if (matchingBass.length === 0) return null;
+  return [...matchingBass].sort((a, b) => voicingScore(a) - voicingScore(b));
 }
 
-function renderDiagram(chordName: string, frets: (number | null)[]): string {
-  const fretted = frets.filter((fret): fret is number => fret !== null && fret > 0);
-  const lowestFret = Math.min(...fretted);
-  const baseFret = lowestFret > FRET_COUNT ? lowestFret : 1;
-  const left = 34;
-  const top = 42;
-  const stringGap = 24;
-  const fretGap = 24;
+function fretY(fret: number, top: number, fretGap: number): number {
+  return top + (fret - 0.5) * fretGap;
+}
+
+function renderDiagram(chordName: string, voicing: GuitarVoicing): string {
+  const left = 46;
+  const top = 38;
+  const stringGap = 25;
+  const fretGap = 27;
   const right = left + stringGap * 5;
   const bottom = top + fretGap * FRET_COUNT;
-  const strings = frets
+  const barres = voicing.barres
+    .map((finger) => {
+      const strings = voicing.fingers
+        .map((value, index) => (value === finger ? index : -1))
+        .filter((index) => index >= 0);
+      if (strings.length < 2) return "";
+      const fret = voicing.frets[strings[0]!]!;
+      const y = fretY(fret, top, fretGap);
+      const x1 = left + Math.min(...strings) * stringGap;
+      const x2 = left + Math.max(...strings) * stringGap;
+      return `<line class="barre-line" x1="${x1}" y1="${y}" x2="${x2}" y2="${y}"/>`;
+    })
+    .join("");
+  const fingerPositions = voicing.frets
     .map((fret, index) => {
       const x = left + index * stringGap;
-      if (fret === null) {
-        return `<text class="string-mark" x="${x}" y="${top - 9}">×</text>`;
+      if (fret < 0) {
+        return `<text class="string-mark" x="${x}" y="${top - 11}">×</text>`;
       }
       if (fret === 0) {
-        return `<circle class="open-string" cx="${x}" cy="${top - 8}" r="4"/>`;
+        return `<circle class="open-string" cx="${x}" cy="${top - 9}" r="5"/>`;
       }
-      const y = top + (fret - baseFret + 0.5) * fretGap;
-      if (y < top || y > bottom) return "";
-      return `<circle class="finger-dot" cx="${x}" cy="${y}" r="7"/>`;
+      if (fret > FRET_COUNT) return "";
+      const finger = voicing.fingers[index]!;
+      const y = fretY(fret, top, fretGap);
+      return `<circle class="finger-dot" cx="${x}" cy="${y}" r="9"/><text class="finger-number" x="${x}" y="${y + 3.5}">${finger || ""}</text>`;
     })
     .join("");
   const verticalStrings = STRING_NAMES.map((name, index) => {
     const x = left + index * stringGap;
-    return `<line class="fret-string" x1="${x}" y1="${top}" x2="${x}" y2="${bottom}"/><text class="string-name" x="${x}" y="${bottom + 17}">${name}</text>`;
+    return `<line class="fret-string" x1="${x}" y1="${top}" x2="${x}" y2="${bottom}"/><text class="string-name" x="${x}" y="${bottom + 20}">${name}</text>`;
   }).join("");
   const horizontalFrets = Array.from({ length: FRET_COUNT + 1 }, (_, index) => {
     const y = top + index * fretGap;
-    const className = index === 0 && baseFret === 1 ? "fret-wire nut" : "fret-wire";
+    const className = index === 0 && voicing.baseFret === 1 ? "fret-wire nut" : "fret-wire";
     return `<line class="${className}" x1="${left}" y1="${y}" x2="${right}" y2="${y}"/>`;
   }).join("");
   const fretLabel =
-    baseFret > 1
-      ? `<text class="fret-label" x="${left - 15}" y="${top + fretGap / 2 + 4}">${baseFret}</text>`
+    voicing.baseFret > 1
+      ? `<text class="fret-label" x="${left - 18}" y="${top + fretGap / 2 + 4}">${voicing.baseFret}º</text>`
       : "";
 
   return `<div class="chord-diagram">
   <h3>${escapeHtml(chordName)}</h3>
-  <p>Vista desde el frente de la guitarra</p>
-  <svg viewBox="0 0 180 190" role="img" aria-label="Diagrama de guitarra para ${escapeHtml(chordName)}">
-    ${verticalStrings}${horizontalFrets}${strings}${fretLabel}
+  <p>Digitación conocida · afinación estándar</p>
+  <svg viewBox="0 0 210 190" role="img" aria-label="Diagrama de guitarra para ${escapeHtml(chordName)}">
+    ${verticalStrings}${horizontalFrets}${barres}${fingerPositions}${fretLabel}
   </svg>
-  <p class="diagram-help">De 6ª cuerda (grave) a 1ª (aguda). ● pisar · ○ al aire · × no tocar</p>
+  <p class="diagram-help">Cuerdas de 6ª (grave) a 1ª (aguda). Números = dedos. ○ al aire · × no tocar</p>
 </div>`;
 }
 
-export function renderGuitarChordDiagram(chordName: string): string | null {
-  const chord = parseChord(chordName);
-  if (!chord) return null;
-  const voicing = findVoicing(chord);
-  return voicing ? renderDiagram(chordName, voicing) : null;
+function positionLabel(voicing: GuitarVoicing): string {
+  const hasOpenStrings = voicing.frets.includes(0);
+  if (voicing.baseFret <= 3 && hasOpenStrings) return "Abierta";
+  return voicing.barres.length > 0
+    ? `Cejilla · traste ${voicing.baseFret}`
+    : `Traste ${voicing.baseFret}`;
+}
+
+export function renderGuitarChordDiagram(
+  chordName: string,
+  selectedPosition = 0,
+): string | null {
+  const voicings = getVoicings(chordName);
+  if (
+    !voicings ||
+    !Number.isInteger(selectedPosition) ||
+    selectedPosition < 0 ||
+    selectedPosition >= voicings.length
+  ) {
+    return null;
+  }
+
+  const positionOptions =
+    voicings.length > 1
+      ? `<nav class="voicing-options" aria-label="Variantes de digitación">${voicings
+          .map(
+            (voicing, index) =>
+              `<button type="button" class="voicing-choice" aria-pressed="${index === selectedPosition}" hx-get="/chord-diagram?chord=${encodeURIComponent(chordName)}&amp;position=${index}" hx-target="#chord-viewer" hx-swap="innerHTML">${index + 1} · ${escapeHtml(positionLabel(voicing))}</button>`,
+          )
+          .join("")}</nav>`
+      : "";
+
+  return `${positionOptions}${renderDiagram(chordName, voicings[selectedPosition]!)}`;
+}
+
+export function getGuitarChordPositionCount(chordName: string): number {
+  return getVoicings(chordName)?.length ?? 0;
 }

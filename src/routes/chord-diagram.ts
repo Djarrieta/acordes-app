@@ -1,8 +1,12 @@
 import { renderError } from "../render/song";
-import { renderGuitarChordDiagram } from "../guitar/chords";
+import {
+  getGuitarChordPositionCount,
+  renderGuitarChordDiagram,
+} from "../guitar/chords";
 
 export function chordDiagramRoute(request: Request): Response {
-  const chord = new URL(request.url).searchParams.get("chord")?.trim() ?? "";
+  const { searchParams } = new URL(request.url);
+  const chord = searchParams.get("chord")?.trim() ?? "";
   if (!chord) {
     return new Response(renderError("Selecciona un acorde para ver su digitación."), {
       status: 400,
@@ -10,10 +14,27 @@ export function chordDiagramRoute(request: Request): Response {
     });
   }
 
-  const diagram = renderGuitarChordDiagram(chord);
+  const positionValue = searchParams.get("position");
+  const position = positionValue === null ? 0 : Number(positionValue);
+  if (
+    positionValue !== null &&
+    (!/^\d+$/.test(positionValue) || !Number.isSafeInteger(position) || position < 0)
+  ) {
+    return new Response(renderError("La variante de digitación no es válida."), {
+      status: 400,
+      headers: { "Content-Type": "text/html; charset=utf-8" },
+    });
+  }
+
+  const positionCount = getGuitarChordPositionCount(chord);
+  const diagram = renderGuitarChordDiagram(chord, position);
   if (!diagram) {
-    return new Response(renderError(`No hay una digitación disponible para ${chord}.`), {
-      status: 422,
+    const message =
+      positionCount > 0
+        ? "La variante de digitación seleccionada no está disponible."
+        : `No encontré digitaciones conocidas para ${chord}.`;
+    return new Response(renderError(message), {
+      status: positionCount > 0 ? 400 : 422,
       headers: { "Content-Type": "text/html; charset=utf-8" },
     });
   }

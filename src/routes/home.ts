@@ -7,7 +7,7 @@ export function homePage(): Response {
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="color-scheme" content="light">
   <title>Acordes — transpositor</title>
-  <link rel="stylesheet" href="/public/styles.css?v=guitar-modal-1">
+  <link rel="stylesheet" href="/public/styles.css?v=guitar-voicings-2">
   <script src="https://unpkg.com/htmx.org@2.0.4"></script>
   <script>
     htmx.config.responseHandling = [
