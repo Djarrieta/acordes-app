@@ -26,8 +26,22 @@ export function chordDiagramRoute(request: Request): Response {
     });
   }
 
+  const targetValue = searchParams.get("target");
+  const target =
+    targetValue === null || targetValue === "chord-viewer"
+      ? "chord-viewer"
+      : targetValue === "accompaniment-chord-viewer"
+        ? "accompaniment-chord-viewer"
+        : null;
+  if (!target) {
+    return new Response(renderError("El destino del diagrama no es válido."), {
+      status: 400,
+      headers: { "Content-Type": "text/html; charset=utf-8" },
+    });
+  }
+
   const positionCount = getGuitarChordPositionCount(chord);
-  const diagram = renderGuitarChordDiagram(chord, position);
+  const diagram = renderGuitarChordDiagram(chord, position, target);
   if (!diagram) {
     const message =
       positionCount > 0

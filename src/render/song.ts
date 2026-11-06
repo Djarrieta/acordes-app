@@ -1,6 +1,5 @@
 import type { ChordToken, SongLine } from "../parser/lacuerda";
 import type { SongState } from "../state";
-import { renderGuitarChordDiagram } from "../guitar/chords";
 import { transposeChord } from "../transpose/chords";
 import { escapeHtml } from "./html";
 
@@ -73,7 +72,12 @@ export function renderSong(state: SongState): string {
     <button type="button" class="secondary" hx-post="/reset" hx-vals='{"id":"${id}"}' hx-target="#song-container" hx-swap="innerHTML">Original</button>
     <output class="transpose-status">${transpositionLabel(state.offset)}</output>
   </div>
-  <div class="youtube-playback youtube-player-frame" data-youtube-player hidden></div>
+  <div class="youtube-media-pair" data-youtube-media hidden>
+    <div class="youtube-media-box accompaniment-chord-box" id="accompaniment-chord-viewer" aria-live="polite">
+      <p class="accompaniment-chord-placeholder">El acorde actual aparecerá aquí cuando empiece la reproducción.</p>
+    </div>
+    <div class="youtube-media-box youtube-player-frame" data-youtube-player aria-label="Video de acompañamiento"></div>
+  </div>
   <details class="youtube-section" data-youtube-song="${songId}">
     <summary class="youtube-summary">
       <span><span class="eyebrow">Acompañamiento</span><strong>YouTube</strong></span>

@@ -84,6 +84,17 @@ describe("renderGuitarChordDiagram", () => {
     expect(response.status).toBe(200);
     expect(await response.text()).toContain("Diagrama de guitarra para Do#");
 
+    const accompaniment = chordDiagramRoute(
+      new Request("http://localhost/chord-diagram?chord=Fa&target=accompaniment-chord-viewer"),
+    );
+    expect(accompaniment.status).toBe(200);
+    expect(await accompaniment.text()).toContain('hx-target="#accompaniment-chord-viewer"');
+
+    const invalidTarget = chordDiagramRoute(
+      new Request("http://localhost/chord-diagram?chord=Fa&target=other"),
+    );
+    expect(invalidTarget.status).toBe(400);
+
     const selected = chordDiagramRoute(
       new Request("http://localhost/chord-diagram?chord=Fa&position=1"),
     );

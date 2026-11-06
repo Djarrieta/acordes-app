@@ -228,6 +228,7 @@ function positionLabel(voicing: GuitarVoicing): string {
 export function renderGuitarChordDiagram(
   chordName: string,
   selectedPosition = 0,
+  targetId: "chord-viewer" | "accompaniment-chord-viewer" = "chord-viewer",
 ): string | null {
   const voicings = getVoicings(chordName);
   if (
@@ -244,7 +245,7 @@ export function renderGuitarChordDiagram(
       ? `<nav class="voicing-options" aria-label="Variantes de digitación">${voicings
           .map(
             (voicing, index) =>
-              `<button type="button" class="voicing-choice" aria-pressed="${index === selectedPosition}" hx-get="/chord-diagram?chord=${encodeURIComponent(chordName)}&amp;position=${index}" hx-target="#chord-viewer" hx-swap="innerHTML">${index + 1} · ${escapeHtml(positionLabel(voicing))}</button>`,
+                `<button type="button" class="voicing-choice" aria-pressed="${index === selectedPosition}" hx-get="/chord-diagram?chord=${encodeURIComponent(chordName)}&amp;position=${index}&amp;target=${targetId}" hx-target="#${targetId}" hx-swap="innerHTML">${index + 1} · ${escapeHtml(positionLabel(voicing))}</button>`,
           )
           .join("")}</nav>`
       : "";

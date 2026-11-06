@@ -610,33 +610,76 @@ h1 {
   line-height: 1.5;
 }
 
-.youtube-playback {
+.youtube-media-pair {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 18rem));
   justify-content: center;
+  gap: 1rem;
   border-top: 1px solid #ece8de;
   background: #fcfaf5;
   padding: 1rem;
 }
 
-.youtube-playback[hidden] {
+.youtube-media-pair[hidden] {
   display: none;
 }
 
-.youtube-player-frame {
+.youtube-media-box {
   overflow: hidden;
-  width: min(100%, 18rem);
+  width: 100%;
+  max-width: 18rem;
   height: 12.5rem;
+  min-width: 0;
   border-radius: 0.75rem;
   background: #242323;
-}
-
-.youtube-player-frame:empty {
-  display: none;
 }
 
 .youtube-player-frame iframe {
   display: block;
   width: 100%;
   height: 100%;
+}
+
+.accompaniment-chord-box {
+  display: grid;
+  align-content: center;
+  justify-items: center;
+  overflow: auto;
+  border: 1px solid #e4dfd4;
+  background: #fffefa;
+  color: #3e3a34;
+  padding: 0.75rem;
+  text-align: center;
+}
+
+.accompaniment-chord-box .chord-diagram {
+  margin: 0;
+}
+
+.accompaniment-chord-box .chord-diagram svg {
+  width: min(13rem, 100%);
+  max-height: 8rem;
+  margin-top: 0.35rem;
+}
+
+.accompaniment-chord-box .chord-diagram h3 {
+  font-size: 1.35rem;
+}
+
+.accompaniment-chord-box .chord-diagram p {
+  font-size: 0.72rem;
+}
+
+.accompaniment-chord-box .diagram-help {
+  display: none;
+}
+
+.accompaniment-chord-placeholder {
+  max-width: 14rem;
+  margin: 0;
+  color: #66625a;
+  font-size: 0.85rem;
+  line-height: 1.5;
 }
 
 .chord-mark-toggle {
@@ -1062,10 +1105,9 @@ h1 {
     flex-direction: column;
   }
 
-  .youtube-player-frame {
+  .youtube-media-box {
     width: 100%;
-    height: min(56.25vw, 12.5rem);
-    min-height: 12.5rem;
+    height: 12.5rem;
   }
 
   .chord-mark-toggle {
@@ -1083,6 +1125,12 @@ h1 {
   .transpose-status {
     width: 100%;
     margin-left: 0;
+  }
+}
+
+@media (max-width: 680px) {
+  .youtube-media-pair {
+    grid-template-columns: minmax(0, 18rem);
   }
 }
 

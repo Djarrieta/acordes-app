@@ -12,6 +12,7 @@ let storageError = "";
 let markMode = false;
 let playbackTimer = null;
 let highlightedChordIndex = null;
+let chordDiagramRequest = 0;
 
 function readPreferences() {
   try {
@@ -142,6 +143,32 @@ function updateCurrentChord(section, video) {
     block: "nearest",
     behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth",
   });
+  void updateAccompanimentChord(section, activeChord);
+}
+
+async function updateAccompanimentChord(section, chord) {
+  const target = section.closest(".song-card")?.querySelector("#accompaniment-chord-viewer");
+  if (!target) return;
+  const requestId = ++chordDiagramRequest;
+  if (!chord) {
+    target.innerHTML = '<p class="accompaniment-chord-placeholder">Aún no hay un acorde marcado en este punto del video.</p>';
+    return;
+  }
+  try {
+    const url = new URL("/chord-diagram", window.location.origin);
+    url.searchParams.set("chord", chord.dataset.chordName);
+    url.searchParams.set("target", "accompaniment-chord-viewer");
+    const response = await fetch(url);
+    const html = await response.text();
+    if (!response.ok) throw new Error(`HTTP ${response.status}: ${html}`);
+    if (requestId !== chordDiagramRequest || activeSection !== section) return;
+    target.innerHTML = html;
+    window.htmx?.process(target);
+  } catch (error) {
+    if (requestId !== chordDiagramRequest || activeSection !== section) return;
+    console.error("No se pudo actualizar el diagrama del acorde actual:", error);
+    target.innerHTML = '<p class="accompaniment-chord-placeholder">No se pudo mostrar la digitación de este acorde.</p>';
+  }
 }
 
 function initializePlayer(section, video) {
