@@ -637,13 +637,96 @@ h1 {
 
 .youtube-playback-controls {
   display: flex;
-  justify-content: center;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.6rem;
   border-top: 1px solid #ece8de;
   background: #fcfaf5;
   padding: 0.8rem 1rem 1rem;
 }
 
 .youtube-playback-controls[hidden] {
+  display: none;
+}
+
+.youtube-progress {
+  display: flex;
+  width: min(100%, 30rem);
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.youtube-progress-time {
+  min-width: 2.7rem;
+  color: #5a564e;
+  font-size: 0.78rem;
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+}
+
+.youtube-progress-track {
+  position: relative;
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  align-items: center;
+}
+
+.youtube-progress-slider {
+  width: 100%;
+  margin: 0;
+  accent-color: #2f684d;
+  cursor: pointer;
+}
+
+.youtube-progress-slider:disabled {
+  cursor: default;
+}
+
+.youtube-progress-marks {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.youtube-progress-mark {
+  position: absolute;
+  top: 50%;
+  width: 0.72rem;
+  height: 0.72rem;
+  padding: 0;
+  border: 2px solid #fcfaf5;
+  border-radius: 999px;
+  background: #b8863b;
+  transform: translate(-50%, -50%);
+  pointer-events: auto;
+  cursor: pointer;
+  box-shadow: 0 1px 4px rgb(36 84 60 / 25%);
+}
+
+.youtube-progress-mark:hover,
+.youtube-progress-mark:focus-visible {
+  background: #8f6427;
+  transform: translate(-50%, -50%) scale(1.18);
+}
+
+.youtube-progress-mark.is-current {
+  background: #2f684d;
+  box-shadow: 0 0 0 3px rgb(47 104 77 / 22%);
+}
+
+.youtube-progress-mark[hidden] {
+  display: none;
+}
+
+.youtube-progress-hint {
+  margin: 0;
+  color: #817c72;
+  font-size: 0.72rem;
+  text-align: center;
+}
+
+.youtube-progress-hint[hidden] {
   display: none;
 }
 

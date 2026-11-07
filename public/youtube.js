@@ -10,6 +10,7 @@ let apiLoading = false;
 let pendingPlayback = null;
 let storageError = "";
 let markMode = false;
+let progressSeeking = false;
 let playbackTimer = null;
 let highlightedChordIndex = null;
 let chordDiagramRequest = 0;
@@ -75,6 +76,89 @@ function updatePlaybackButton(section) {
   button.innerHTML = playing
     ? 'Ⅱ <span>Pausar audio</span>'
     : '▶ <span>Reproducir audio</span>';
+}
+
+function getProgressParts(section) {
+  const songCard = section?.closest(".song-card");
+  return {
+    slider: songCard?.querySelector("[data-youtube-progress]"),
+    current: songCard?.querySelector("[data-youtube-progress-current]"),
+    duration: songCard?.querySelector("[data-youtube-progress-duration]"),
+    marks: songCard?.querySelector("[data-youtube-progress-marks]"),
+    hint: songCard?.querySelector("[data-youtube-progress-hint]"),
+  };
+}
+
+function updateProgress(section) {
+  if (!section) return;
+  const { slider, current, duration, marks, hint } = getProgressParts(section);
+  if (!slider || !current || !duration) return;
+  const video = preferences.get(section.dataset.youtubeSong);
+  const ready = Boolean(player?.getCurrentTime && player?.getDuration);
+  const total = ready ? player.getDuration() : 0;
+  const position = ready ? player.getCurrentTime() : 0;
+  const hasDuration = Number.isFinite(total) && total > 0;
+  slider.disabled = !hasDuration;
+  if (hasDuration) {
+    slider.max = String(total);
+    if (!progressSeeking) slider.value = String(Math.min(position, total));
+    duration.textContent = formatTimestamp(Math.floor(total));
+  } else if (!progressSeeking) {
+    slider.max = "0";
+    slider.value = "0";
+    duration.textContent = "0:00";
+  }
+  if (!progressSeeking) {
+    current.textContent = formatTimestamp(
+      Number.isFinite(position) ? Math.max(0, Math.floor(position)) : 0,
+    );
+  }
+  const timestamps = updateProgressMarks(section, video, hasDuration ? total : 0, marks);
+  if (hint) {
+    hint.hidden = !video || timestamps > 0;
+    hint.textContent = video
+      ? "Marca los acordes para saltar a sus tiempos."
+      : "Vincula un video para escuchar y moverte por la canción.";
+  }
+}
+
+function updateProgressMarks(section, video, total, container) {
+  if (!container) return 0;
+  const timestamps = video?.chordTimestamps ?? [];
+  const valid = timestamps
+    .map((timestamp, index) => ({ timestamp, index }))
+    .filter(({ timestamp }) =>
+      Number.isSafeInteger(timestamp)
+      && timestamp >= 0
+      && total > 0
+      && timestamp <= total,
+    );
+  const signature = `${Math.round(total)}:${valid.map(({ timestamp, index }) => `${index}-${timestamp}`).join(",")}`;
+  if (container.dataset.signature !== signature) {
+    container.dataset.signature = signature;
+    container.replaceChildren();
+    valid.forEach(({ timestamp, index }) => {
+      const mark = document.createElement("button");
+      mark.type = "button";
+      mark.className = "youtube-progress-mark";
+      mark.dataset.youtubeProgressMark = String(timestamp);
+      mark.dataset.chordMarkIndex = String(index);
+      mark.style.left = `${Math.min(100, Math.max(0, (timestamp / total) * 100))}%`;
+      mark.title = `Ir a ${formatTimestamp(timestamp)}`;
+      mark.setAttribute("aria-label", `Ir a ${formatTimestamp(timestamp)}`);
+      container.append(mark);
+    });
+  }
+  container.querySelectorAll("[data-chord-mark-index]").forEach((mark) => {
+    mark.classList.toggle("is-current", Number(mark.dataset.chordMarkIndex) === highlightedChordIndex);
+  });
+  return valid.length;
+}
+
+function seekToTimestamp(seconds) {
+  if (!activeSection || !player?.seekTo || !Number.isFinite(seconds)) return;
+  player.seekTo(seconds, true);
+  updateProgress(activeSection);
 }
 
 function updateChordControls(section, video) {
@@ -212,6 +296,7 @@ function initializePlayer(section, video) {
   if (activeSection !== section || !video || !window.YT?.Player) return;
   if (player && playerVideoId === video.videoId && player.getPlayerState) {
     updateChordControls(section, video);
+    updateProgress(section);
     return;
   }
   if (player) {
@@ -249,6 +334,7 @@ function initializePlayer(section, video) {
         player = event.target;
         updateChordControls(section, video);
         updatePlaybackButton(section);
+        updateProgress(section);
         setMarkMode(section, false);
         const restore = pendingPlayback;
         pendingPlayback = null;
@@ -270,11 +356,16 @@ function initializePlayer(section, video) {
             : "Reproduciendo. Abre este panel para activar las marcas de acordes.");
           if (playbackTimer !== null) window.clearInterval(playbackTimer);
           updateCurrentChord(section, video);
-          playbackTimer = window.setInterval(() => updateCurrentChord(section, video), 250);
+          playbackTimer = window.setInterval(() => {
+            updateCurrentChord(section, video);
+            updateProgress(section);
+          }, 250);
           updatePlaybackButton(section);
+          updateProgress(section);
         } else {
           section.classList.remove("is-playing");
           updatePlaybackButton(section);
+          updateProgress(section);
           if (playbackTimer !== null) {
             window.clearInterval(playbackTimer);
             playbackTimer = null;
@@ -319,6 +410,7 @@ function initializeSection(section) {
   if (playbackControls) playbackControls.hidden = !video;
   if (host) host.hidden = false;
   updatePlaybackButton(section);
+  updateProgress(section);
   if (!video) {
     setMarkMode(section, false);
     section.classList.remove("is-playing");
@@ -333,6 +425,7 @@ function initializeSection(section) {
       highlightedChordIndex = null;
     }
     updatePlaybackButton(section);
+    updateProgress(section);
     setStatus(section, storageError || "Busca un video, copia su enlace y pégalo aquí.");
     return;
   }
@@ -370,6 +463,7 @@ document.addEventListener("htmx:beforeSwap", (event) => {
   if (event.detail.target?.id !== "song-container") return;
   markMode = false;
   highlightedChordIndex = null;
+  progressSeeking = false;
   if (playbackTimer !== null) {
     window.clearInterval(playbackTimer);
     playbackTimer = null;
@@ -467,6 +561,11 @@ document.addEventListener("click", (event) => {
     updatePlaybackButton(activeSection);
     return;
   }
+  const progressMark = target.closest("[data-youtube-progress-mark]");
+  if (progressMark) {
+    seekToTimestamp(Number(progressMark.dataset.youtubeProgressMark));
+    return;
+  }
   const toggle = target.closest("[data-chord-mark-toggle]");
   if (!toggle) return;
   const section = toggle.closest("[data-youtube-song]");
@@ -475,6 +574,24 @@ document.addEventListener("click", (event) => {
   setStatus(section, markMode
     ? "Marcas activadas: pulsa el acorde que está sonando para guardar su tiempo."
     : "Marcas desactivadas. Los acordes vuelven a abrir sus diagramas.");
+});
+
+document.addEventListener("input", (event) => {
+  const target = event.target;
+  if (!(target instanceof HTMLInputElement) || !target.matches("[data-youtube-progress]")) return;
+  const seconds = Number(target.value);
+  if (!Number.isFinite(seconds)) return;
+  progressSeeking = true;
+  const { current } = getProgressParts(activeSection);
+  if (current) current.textContent = formatTimestamp(Math.max(0, Math.floor(seconds)));
+  seekToTimestamp(seconds);
+});
+
+document.addEventListener("change", (event) => {
+  const target = event.target;
+  if (!(target instanceof HTMLInputElement) || !target.matches("[data-youtube-progress]")) return;
+  progressSeeking = false;
+  seekToTimestamp(Number(target.value));
 });
 
 document.addEventListener("click", (event) => {
@@ -496,6 +613,7 @@ document.addEventListener("click", (event) => {
   preferences.set(activeSection.dataset.youtubeSong, video);
   const saved = savePreferences();
   updateChordControls(activeSection, video);
+  updateProgress(activeSection);
   setStatus(activeSection, saved
     ? `Marca guardada en ${formatTimestamp(video.chordTimestamps[index])} para ${chord.dataset.chordName}.`
     : storageError);

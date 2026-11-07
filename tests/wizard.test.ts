@@ -7,8 +7,8 @@ describe("song wizard", () => {
     const page = await homePage().text();
 
     expect(page).toContain('aria-label="Pasos de la canción"');
-    expect(page).toContain('href="/public/styles.css?v=youtube-9"');
-    expect(page).toContain('src="/public/youtube.js?v=8"');
+    expect(page).toContain('href="/public/styles.css?v=youtube-10"');
+    expect(page).toContain('src="/public/youtube.js?v=9"');
     expect(page).toContain('data-wizard-step="2"');
     expect(page).toContain(">Busca</span>");
     expect(page).toContain(">Reproducir</span>");
@@ -52,6 +52,11 @@ describe("song wizard", () => {
     );
     expect(song).toContain('data-youtube-playback-controls hidden');
     expect(song).toContain('data-youtube-play disabled aria-label="Reproducir audio"');
+    expect(song).toContain('data-youtube-progress min="0" max="0" step="0.1"');
+    expect(song).toContain('aria-label="Posición de la canción"');
+    expect(song).toContain("data-youtube-progress-current");
+    expect(song).toContain("data-youtube-progress-duration");
+    expect(song).toContain("data-youtube-progress-marks");
     expect(song).not.toContain("data-lyric-mark");
     expect(song).not.toContain("source-link");
     expect(song).not.toContain("https://acordes.lacuerda.net/artista/cancion.shtml");
