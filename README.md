@@ -21,6 +21,8 @@ bun run start
 
 El servidor lee `HOST` y `PORT` del entorno; sus valores predeterminados son `0.0.0.0` y `4173`. Puedes copiarlos desde `.env.example` si necesitas configurar esos valores.
 
+> **Entorno de producción (POC):** la aplicación desplegada vive en <https://acordes.ingeniar.online/> (Docker + Cloudflare Tunnel). El desarrollo se hace por SSH sobre el servidor, así que `localhost` no es el entorno de validación: cada cambio se publica reconstruyendo el contenedor y se comprueba en esa URL. No hay separación entre dev y prod; todo es producción y, al ser una POC, está permitido romperla durante la iteración.
+
 ## Uso
 
 Busca por nombre de canción o de artista y pulsa **Reproducir** en el resultado. La vista de reproducción ocupa la pantalla: el diagrama y el video quedan visibles y la letra se desplaza dentro de su propio panel, centrando automáticamente la línea activa. **Busca** vuelve al buscador. En la vista de reproducción, marca con el corazón las canciones que te gustan; quedan guardadas en el almacenamiento local de tu navegador. En **Acompañamiento**, busca un video de YouTube y pega su enlace. Usa **Reproducir audio** para iniciar o pausar el video; el control queda junto al video compacto. Activa las marcas de acordes y pulsa cada acorde para guardar el tiempo; el acorde que corresponde al punto actual se resalta y la letra acompaña el avance. El diagrama de digitación del acorde actual se muestra junto al video y cambia al avanzar la canción. Al cerrar el panel, las marcas dejan de editarse y los acordes vuelven a abrir sus diagramas. El reproductor de YouTube permanece visible en formato compacto para que el audio siga dentro del reproductor oficial; el panel de configuración sí se puede plegar. Videos y marcas se guardan por canción en ese navegador. La sincronización es manual: YouTube no ofrece transcripciones públicas para consultarlas sin autorización. Al abrir el buscador, las canciones favoritas aparecen automáticamente y puedes usar el botón de corazón junto al campo de búsqueda para mostrar u ocultar esa lista. El campo empieza vacío. La preferencia de transposición también se guarda por canción en el navegador y se restaura al volver a reproducirla; **Original** la elimina. Selecciona cualquier acorde de la letra para ver una digitación para guitarra.
@@ -43,7 +45,17 @@ cp .env.example .env
 docker compose up --build
 ```
 
-La aplicación quedará disponible en <http://127.0.0.1:4173>. Compose publica el puerto solo en la interfaz local.
+La aplicación quedará disponible en <http://127.0.0.1:4173>. Compose publica el puerto solo en la interfaz local; el túnel de Cloudflare es quien la expone públicamente en <https://acordes.ingeniar.online/>.
+
+Para publicar cambios en el servidor y validarlos:
+
+```sh
+bun run test && bun run typecheck
+docker compose config -q && docker compose up -d --build
+curl -sS -m 5 https://acordes.ingeniar.online/
+```
+
+El contenedor `acordes-app-c` se reconstruye con el código actual y el túnel reutiliza el puerto local `127.0.0.1:4173`. La verificación funcional y visual se hace en <https://acordes.ingeniar.online/>, no en `localhost`. Cada cambio que se publique queda disponible en esa URL; no hay entorno de desarrollo separado.
 
 ## Estructura
 
