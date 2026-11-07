@@ -625,6 +625,7 @@ h1 {
   display: grid;
   grid-template-columns: minmax(0, 24rem);
   justify-content: center;
+  justify-items: center;
   gap: 1rem;
   border-top: 1px solid #ece8de;
   background: #fcfaf5;
@@ -1467,10 +1468,21 @@ body.is-song-view .song-lyrics {
 
   .youtube-media-box {
     width: 100%;
+    max-width: none;
     height: 12.5rem;
+    margin-inline: auto;
+  }
+
+  .accompaniment-chord-box {
+    width: 100%;
+    max-width: none;
+    margin-inline: auto;
   }
 
   body.is-song-view .youtube-media-box {
+    width: 100%;
+    max-width: none;
+    margin-inline: auto;
     height: clamp(6.5rem, 19dvh, 10.5rem);
   }
 
@@ -1499,11 +1511,21 @@ body.is-song-view .song-lyrics {
 
 @media (max-width: 680px) {
   .youtube-media-pair {
-    grid-template-columns: minmax(0, 24rem);
+    grid-template-columns: minmax(0, 1fr);
+    justify-items: center;
+    padding-inline: 0.75rem;
   }
 
   body.is-song-view .youtube-media-pair {
-    grid-template-columns: minmax(0, 24rem);
+    grid-template-columns: minmax(0, 1fr);
+    justify-items: center;
+  }
+
+  .youtube-media-box,
+  .accompaniment-chord-box {
+    width: 100%;
+    max-width: none;
+    margin-inline: auto;
   }
 
   body.is-song-view .youtube-section[open] .youtube-panel {
