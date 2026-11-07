@@ -3,6 +3,10 @@ import type { SongState } from "../state";
 import { transposeChord } from "../transpose/chords";
 import { escapeHtml } from "./html";
 
+function renderChordButton(chord: string, index: number): string {
+  return `<button type="button" class="chord-trigger" data-chord-index="${index}" data-chord-name="${escapeHtml(chord)}" aria-label="Ver diagrama de ${escapeHtml(chord)}" hx-get="/chord-diagram?chord=${encodeURIComponent(chord)}" hx-target="#chord-viewer" hx-swap="innerHTML">${escapeHtml(chord)}<span class="chord-time-marker" aria-hidden="true"></span></button>`;
+}
+
 function renderChordLine(chords: ChordToken[], offset: number, firstChordIndex: number): string {
   let output = "";
   let position = 0;
@@ -10,10 +14,25 @@ function renderChordLine(chords: ChordToken[], offset: number, firstChordIndex: 
     const chord = transposeChord(token.chord, offset);
     const target = Math.max(token.column, position);
     output += " ".repeat(target - position);
-    output += `<button type="button" class="chord-trigger" data-chord-index="${firstChordIndex + index}" data-chord-name="${escapeHtml(chord)}" aria-label="Ver diagrama de ${escapeHtml(chord)}" hx-get="/chord-diagram?chord=${encodeURIComponent(chord)}" hx-target="#chord-viewer" hx-swap="innerHTML">${escapeHtml(chord)}<span class="chord-time-marker" aria-hidden="true"></span></button>`;
+    output += renderChordButton(chord, firstChordIndex + index);
     position = target + chord.length;
   }
   return output;
+}
+
+function renderInlineLyric(line: SongLine, offset: number, firstChordIndex: number): string {
+  const lyric = line.lyric;
+  let output = "";
+  let cursor = 0;
+  for (const [index, token] of line.chords.entries()) {
+    const chord = transposeChord(token.chord, offset);
+    const column = Math.min(Math.max(token.column, cursor), lyric.length);
+    output += escapeHtml(lyric.slice(cursor, column));
+    output += renderChordButton(chord, firstChordIndex + index);
+    cursor = column;
+  }
+  output += escapeHtml(lyric.slice(cursor));
+  return output || "&nbsp;";
 }
 
 function renderSongLine(
@@ -26,8 +45,10 @@ function renderSongLine(
     line.chords.length === 0
       ? ""
       : `<span class="chords">${renderChordLine(line.chords, offset, firstChordIndex)}</span><br>`;
+  const inlineLyric = renderInlineLyric(line, offset, firstChordIndex);
   return `<div class="song-line" data-lyric-index="${lineIndex}">
     <span class="song-line-text">${chordLine}${escapeHtml(line.lyric)}</span>
+    <span class="song-line-inline">${inlineLyric}</span>
   </div>`;
 }
 
