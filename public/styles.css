@@ -683,53 +683,6 @@ h1 {
   cursor: default;
 }
 
-.youtube-progress-marks {
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-}
-
-.youtube-progress-mark {
-  position: absolute;
-  top: 50%;
-  width: 0.72rem;
-  height: 0.72rem;
-  padding: 0;
-  border: 2px solid #fcfaf5;
-  border-radius: 999px;
-  background: #b8863b;
-  transform: translate(-50%, -50%);
-  pointer-events: auto;
-  cursor: pointer;
-  box-shadow: 0 1px 4px rgb(36 84 60 / 25%);
-}
-
-.youtube-progress-mark:hover,
-.youtube-progress-mark:focus-visible {
-  background: #8f6427;
-  transform: translate(-50%, -50%) scale(1.18);
-}
-
-.youtube-progress-mark.is-current {
-  background: #2f684d;
-  box-shadow: 0 0 0 3px rgb(47 104 77 / 22%);
-}
-
-.youtube-progress-mark[hidden] {
-  display: none;
-}
-
-.youtube-progress-hint {
-  margin: 0;
-  color: #817c72;
-  font-size: 0.72rem;
-  text-align: center;
-}
-
-.youtube-progress-hint[hidden] {
-  display: none;
-}
-
 .youtube-play-button {
   display: inline-flex;
   min-width: 13rem;
@@ -1578,6 +1531,27 @@ body.is-song-view .song-lyrics {
 
   body.is-song-view .youtube-section.has-video[open] .youtube-unlink {
     grid-column: 1;
+  }
+}
+
+@media (min-width: 900px) {
+  body.is-song-view .song-lyrics {
+    width: min(100%, 44rem);
+    height: calc(6 * 1.7em);
+    max-height: 100%;
+    align-self: center;
+    justify-self: center;
+    overflow: hidden;
+    border: 1px solid #ece8de;
+    border-radius: 0.75rem;
+    background: #fffefa;
+    padding: clamp(1rem, 2.2vh, 1.6rem) clamp(1.5rem, 3.5vw, 2.75rem);
+    font-size: clamp(1.05rem, 2vh, 1.4rem);
+    line-height: 1.7;
+  }
+
+  body.is-song-view .song-line-text {
+    min-height: 1.7em;
   }
 }
 

@@ -85,12 +85,10 @@ export function renderSong(state: SongState): string {
     <div class="youtube-progress" aria-label="Progreso de la canción">
       <span class="youtube-progress-time" data-youtube-progress-current>0:00</span>
       <div class="youtube-progress-track">
-        <div class="youtube-progress-marks" data-youtube-progress-marks></div>
         <input type="range" class="youtube-progress-slider" data-youtube-progress min="0" max="0" step="0.1" value="0" aria-label="Posición de la canción" disabled>
       </div>
       <span class="youtube-progress-time" data-youtube-progress-duration>0:00</span>
     </div>
-    <p class="youtube-progress-hint" data-youtube-progress-hint>Marca los acordes para saltar a sus tiempos.</p>
     <button type="button" class="youtube-play-button" data-youtube-play disabled aria-label="Reproducir audio">▶ <span>Reproducir audio</span></button>
   </div>
   <details class="youtube-section" data-youtube-song="${songId}">

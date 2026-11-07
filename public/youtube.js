@@ -84,16 +84,13 @@ function getProgressParts(section) {
     slider: songCard?.querySelector("[data-youtube-progress]"),
     current: songCard?.querySelector("[data-youtube-progress-current]"),
     duration: songCard?.querySelector("[data-youtube-progress-duration]"),
-    marks: songCard?.querySelector("[data-youtube-progress-marks]"),
-    hint: songCard?.querySelector("[data-youtube-progress-hint]"),
   };
 }
 
 function updateProgress(section) {
   if (!section) return;
-  const { slider, current, duration, marks, hint } = getProgressParts(section);
+  const { slider, current, duration } = getProgressParts(section);
   if (!slider || !current || !duration) return;
-  const video = preferences.get(section.dataset.youtubeSong);
   const ready = Boolean(player?.getCurrentTime && player?.getDuration);
   const total = ready ? player.getDuration() : 0;
   const position = ready ? player.getCurrentTime() : 0;
@@ -113,46 +110,6 @@ function updateProgress(section) {
       Number.isFinite(position) ? Math.max(0, Math.floor(position)) : 0,
     );
   }
-  const timestamps = updateProgressMarks(section, video, hasDuration ? total : 0, marks);
-  if (hint) {
-    hint.hidden = !video || timestamps > 0;
-    hint.textContent = video
-      ? "Marca los acordes para saltar a sus tiempos."
-      : "Vincula un video para escuchar y moverte por la canción.";
-  }
-}
-
-function updateProgressMarks(section, video, total, container) {
-  if (!container) return 0;
-  const timestamps = video?.chordTimestamps ?? [];
-  const valid = timestamps
-    .map((timestamp, index) => ({ timestamp, index }))
-    .filter(({ timestamp }) =>
-      Number.isSafeInteger(timestamp)
-      && timestamp >= 0
-      && total > 0
-      && timestamp <= total,
-    );
-  const signature = `${Math.round(total)}:${valid.map(({ timestamp, index }) => `${index}-${timestamp}`).join(",")}`;
-  if (container.dataset.signature !== signature) {
-    container.dataset.signature = signature;
-    container.replaceChildren();
-    valid.forEach(({ timestamp, index }) => {
-      const mark = document.createElement("button");
-      mark.type = "button";
-      mark.className = "youtube-progress-mark";
-      mark.dataset.youtubeProgressMark = String(timestamp);
-      mark.dataset.chordMarkIndex = String(index);
-      mark.style.left = `${Math.min(100, Math.max(0, (timestamp / total) * 100))}%`;
-      mark.title = `Ir a ${formatTimestamp(timestamp)}`;
-      mark.setAttribute("aria-label", `Ir a ${formatTimestamp(timestamp)}`);
-      container.append(mark);
-    });
-  }
-  container.querySelectorAll("[data-chord-mark-index]").forEach((mark) => {
-    mark.classList.toggle("is-current", Number(mark.dataset.chordMarkIndex) === highlightedChordIndex);
-  });
-  return valid.length;
 }
 
 function seekToTimestamp(seconds) {
@@ -559,11 +516,6 @@ document.addEventListener("click", (event) => {
       player.playVideo();
     }
     updatePlaybackButton(activeSection);
-    return;
-  }
-  const progressMark = target.closest("[data-youtube-progress-mark]");
-  if (progressMark) {
-    seekToTimestamp(Number(progressMark.dataset.youtubeProgressMark));
     return;
   }
   const toggle = target.closest("[data-chord-mark-toggle]");
