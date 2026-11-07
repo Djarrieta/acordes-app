@@ -623,7 +623,7 @@ h1 {
 
 .youtube-media-pair {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 18rem));
+  grid-template-columns: minmax(0, 24rem);
   justify-content: center;
   gap: 1rem;
   border-top: 1px solid #ece8de;
@@ -1444,12 +1444,11 @@ body.is-song-view .song-lyrics {
 
 @media (max-width: 680px) {
   .youtube-media-pair {
-    grid-template-columns: minmax(0, 18rem);
+    grid-template-columns: minmax(0, 24rem);
   }
 
   body.is-song-view .youtube-media-pair {
-    grid-template-columns: minmax(0, 18rem);
-    grid-template-rows: repeat(2, minmax(0, 1fr));
+    grid-template-columns: minmax(0, 24rem);
   }
 
   body.is-song-view .youtube-section[open] .youtube-panel {
@@ -1497,6 +1496,19 @@ body.is-song-view .song-lyrics {
   body.is-song-view .youtube-section.has-video[open] .youtube-unlink {
     grid-column: 1;
   }
+}
+
+.youtube-player-frame[data-youtube-player] {
+  position: absolute;
+  left: -9999px;
+  top: 0;
+  width: 20rem;
+  height: 11.25rem;
+  min-width: 0;
+  max-width: none;
+  overflow: hidden;
+  opacity: 0;
+  pointer-events: none;
 }
 
 @media (prefers-reduced-motion: reduce) {
