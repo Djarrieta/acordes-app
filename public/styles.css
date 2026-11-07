@@ -1318,19 +1318,32 @@ body.is-song-view .song-lyrics {
 }
 
 .song-line-text {
-  min-height: 1.55em;
+  display: block;
+  min-height: 0;
+  white-space: normal;
+}
+
+.song-word {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: flex-start;
+  vertical-align: bottom;
   white-space: pre;
 }
 
-.song-line-inline {
-  display: none;
-  white-space: normal;
-  overflow-wrap: anywhere;
-}
-
-.chords {
+.song-word-chords {
+  display: block;
+  min-height: 1.35em;
+  line-height: 1.35;
+  white-space: pre;
   color: #a34a24;
   font-weight: 750;
+}
+
+.song-word-text {
+  display: block;
+  line-height: 1.55;
+  white-space: pre;
 }
 
 .error {
@@ -1546,29 +1559,6 @@ body.is-song-view .song-lyrics {
     overflow-y: auto;
     padding: 0.85rem 0.9rem 1.1rem;
     font-size: 1rem;
-    line-height: 1.9;
-  }
-
-  body.is-song-view .song-line-text {
-    display: none;
-  }
-
-  body.is-song-view .song-line-inline {
-    display: block;
-    min-height: 1.9em;
-  }
-
-  .song-line-inline .chord-trigger {
-    color: #a34a24;
-    font-weight: 750;
-  }
-
-  .song-line-inline .chord-trigger::before {
-    content: "[";
-  }
-
-  .song-line-inline .chord-trigger::after {
-    content: "]";
   }
 
   input:not([type="range"]),
@@ -1581,7 +1571,7 @@ body.is-song-view .song-lyrics {
 @media (min-width: 900px) {
   body.is-song-view .song-lyrics {
     width: min(100%, 44rem);
-    height: calc(6 * 1.7em);
+    height: calc(3 * 2.9em + 2.4em);
     max-height: 100%;
     align-self: center;
     justify-self: center;
@@ -1591,11 +1581,6 @@ body.is-song-view .song-lyrics {
     background: #fffefa;
     padding: clamp(1rem, 2.2vh, 1.6rem) clamp(1.5rem, 3.5vw, 2.75rem);
     font-size: clamp(1.05rem, 2vh, 1.4rem);
-    line-height: 1.7;
-  }
-
-  body.is-song-view .song-line-text {
-    min-height: 1.7em;
   }
 }
 

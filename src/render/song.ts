@@ -1,38 +1,60 @@
-import type { ChordToken, SongLine } from "../parser/lacuerda";
+import type { SongLine } from "../parser/lacuerda";
 import type { SongState } from "../state";
 import { transposeChord } from "../transpose/chords";
 import { escapeHtml } from "./html";
+
+type PositionedChord = { chord: string; index: number; column: number };
+type WordRange = { start: number; end: number; chords: PositionedChord[] };
 
 function renderChordButton(chord: string, index: number): string {
   return `<button type="button" class="chord-trigger" data-chord-index="${index}" data-chord-name="${escapeHtml(chord)}" aria-label="Ver diagrama de ${escapeHtml(chord)}" hx-get="/chord-diagram?chord=${encodeURIComponent(chord)}" hx-target="#chord-viewer" hx-swap="innerHTML">${escapeHtml(chord)}<span class="chord-time-marker" aria-hidden="true"></span></button>`;
 }
 
-function renderChordLine(chords: ChordToken[], offset: number, firstChordIndex: number): string {
+function positionChords(
+  line: SongLine,
+  offset: number,
+  firstChordIndex: number,
+): PositionedChord[] {
+  return line.chords.map((token, index) => ({
+    chord: transposeChord(token.chord, offset),
+    index: firstChordIndex + index,
+    column: token.column,
+  }));
+}
+
+function renderChordRow(chords: PositionedChord[], start: number): string {
   let output = "";
   let position = 0;
-  for (const [index, token] of chords.entries()) {
-    const chord = transposeChord(token.chord, offset);
-    const target = Math.max(token.column, position);
+  for (const chord of chords) {
+    const target = Math.max(chord.column - start, position);
     output += " ".repeat(target - position);
-    output += renderChordButton(chord, firstChordIndex + index);
-    position = target + chord.length;
+    output += renderChordButton(chord.chord, chord.index);
+    position = target + chord.chord.length;
   }
   return output;
 }
 
-function renderInlineLyric(line: SongLine, offset: number, firstChordIndex: number): string {
-  const lyric = line.lyric;
-  let output = "";
-  let cursor = 0;
-  for (const [index, token] of line.chords.entries()) {
-    const chord = transposeChord(token.chord, offset);
-    const column = Math.min(Math.max(token.column, cursor), lyric.length);
-    output += escapeHtml(lyric.slice(cursor, column));
-    output += renderChordButton(chord, firstChordIndex + index);
-    cursor = column;
+function splitWords(lyric: string): WordRange[] {
+  const words: WordRange[] = [];
+  for (const match of lyric.matchAll(/\S+/g)) {
+    words.push({ start: match.index, end: match.index + match[0].length, chords: [] });
   }
-  output += escapeHtml(lyric.slice(cursor));
-  return output || "&nbsp;";
+  return words;
+}
+
+function assignChords(words: WordRange[], chords: PositionedChord[]): void {
+  for (const chord of chords) {
+    const target = words.find((word) => chord.column >= word.start && chord.column < word.end)
+      ?? words.find((word) => word.start > chord.column)
+      ?? words.at(-1);
+    target?.chords.push(chord);
+  }
+}
+
+function renderWord(word: WordRange, lyric: string): string {
+  const chordRow = renderChordRow(word.chords, word.start);
+  const text = escapeHtml(lyric.slice(word.start, word.end));
+  return `<span class="song-word"><span class="song-word-chords">${chordRow || "&nbsp;"}</span><span class="song-word-text">${text}</span></span>`;
 }
 
 function renderSongLine(
@@ -41,14 +63,26 @@ function renderSongLine(
   lineIndex: number,
   firstChordIndex: number,
 ): string {
-  const chordLine =
-    line.chords.length === 0
-      ? ""
-      : `<span class="chords">${renderChordLine(line.chords, offset, firstChordIndex)}</span><br>`;
-  const inlineLyric = renderInlineLyric(line, offset, firstChordIndex);
+  const chords = positionChords(line, offset, firstChordIndex);
+  const words = splitWords(line.lyric);
+  let content: string;
+  if (words.length === 0) {
+    const chordRow = renderChordRow(chords, 0);
+    content = chordRow
+      ? `<span class="song-word"><span class="song-word-chords">${chordRow}</span><span class="song-word-text">&nbsp;</span></span>`
+      : "&nbsp;";
+  } else {
+    assignChords(words, chords);
+    const parts: string[] = [];
+    const leading = words[0].start;
+    if (leading > 0) {
+      parts.push(`<span class="song-word"><span class="song-word-text">${"&nbsp;".repeat(leading)}</span></span>`);
+    }
+    for (const word of words) parts.push(renderWord(word, line.lyric));
+    content = parts.join(" ");
+  }
   return `<div class="song-line" data-lyric-index="${lineIndex}">
-    <span class="song-line-text">${chordLine}${escapeHtml(line.lyric)}</span>
-    <span class="song-line-inline">${inlineLyric}</span>
+    <span class="song-line-text">${content}</span>
   </div>`;
 }
 

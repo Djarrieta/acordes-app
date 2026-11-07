@@ -7,7 +7,7 @@ describe("song wizard", () => {
     const page = await homePage().text();
 
     expect(page).toContain('aria-label="Pasos de la canción"');
-    expect(page).toContain('href="/public/styles.css?v=youtube-12"');
+    expect(page).toContain('href="/public/styles.css?v=youtube-13"');
     expect(page).toContain('src="/public/youtube.js?v=10"');
     expect(page).toContain('data-wizard-step="2"');
     expect(page).toContain(">Busca</span>");
@@ -47,7 +47,8 @@ describe("song wizard", () => {
     expect(song).not.toContain("<details class=\"youtube-section\" open");
     expect(song).toContain('data-chord-mark-toggle aria-pressed="false"');
     expect(song).toContain('data-chord-index="0"');
-    expect(song).toContain('<span class="song-line-inline">');
+    expect(song).toContain('<span class="song-word">');
+    expect(song).toContain('<span class="song-word-chords">');
     expect(song.indexOf('id="accompaniment-chord-viewer"')).toBeLessThan(
       song.indexOf('data-youtube-player'),
     );
