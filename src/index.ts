@@ -16,17 +16,18 @@ Bun.serve({
   async fetch(request) {
     const { pathname } = new URL(request.url);
 
-    if (request.method === "GET" && pathname === "/") {
+    const method = request.method === "HEAD" ? "GET" : request.method;
+    if (method === "GET" && pathname === "/") {
       return homePage();
     }
-    if (request.method === "GET" && pathname === "/search") {
+    if (method === "GET" && pathname === "/search") {
       return searchRoute(request);
     }
-    if (request.method === "GET" && pathname === "/artist") {
+    if (method === "GET" && pathname === "/artist") {
       return artistRoute(request);
     }
     if (pathname === "/chord-diagram") {
-      if (request.method === "GET") return chordDiagramRoute(request);
+      if (method === "GET") return chordDiagramRoute(request);
       return new Response("Método no permitido.", {
         status: 405,
         headers: { Allow: "GET" },
@@ -44,12 +45,12 @@ Bun.serve({
     if (request.method === "POST" && pathname === "/youtube/video-id") {
       return youtubeVideoIdRoute(request);
     }
-    if (request.method === "GET" && pathname === "/public/styles.css") {
+    if (method === "GET" && pathname === "/public/styles.css") {
       return new Response(Bun.file(new URL("../public/styles.css", import.meta.url)), {
         headers: { "Content-Type": "text/css; charset=utf-8" },
       });
     }
-    if (request.method === "GET" && pathname === "/public/youtube.js") {
+    if (method === "GET" && pathname === "/public/youtube.js") {
       return new Response(Bun.file(new URL("../public/youtube.js", import.meta.url)), {
         headers: { "Content-Type": "text/javascript; charset=utf-8" },
       });
