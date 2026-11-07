@@ -1593,11 +1593,12 @@ body.is-song-view .song-lyrics {
 @media (min-width: 900px) {
   body.is-song-view .song-lyrics {
     width: min(100%, 44rem);
-    height: calc(3 * 2.9em + 2.4em);
+    min-height: 0;
     max-height: 100%;
-    align-self: center;
+    align-self: stretch;
     justify-self: center;
-    overflow: hidden;
+    overflow-x: hidden;
+    overflow-y: auto;
     border: 1px solid #ece8de;
     border-radius: 0.75rem;
     background: #fffefa;
