@@ -97,6 +97,42 @@ describe("song wizard", () => {
     expect(song).not.toContain("https://acordes.lacuerda.net/artista/cancion.shtml");
   });
 
+  test("warns in the player when automatic timestamps fail", () => {
+    const song = renderSong(
+      makeSong({
+        timestampsStatus: "partial",
+        timestampsError: "Cobertura baja (23 % de palabras, 69 % de líneas). Revisa la letra o marca los acordes a mano.",
+        lines: [
+          {
+            id: "line-1",
+            position: 0,
+            text: "[C]Letra",
+            lyric: "Letra",
+            isManual: false,
+            isBreak: false,
+            chords: [
+              {
+                id: "chord-1",
+                position: 0,
+                name: "C",
+                column: 0,
+                timestampMs: null,
+                timestampSource: "none",
+                confidence: null,
+              },
+            ],
+          },
+        ],
+      }),
+      0,
+    );
+
+    expect(song).toContain('class="timestamps-warning"');
+    expect(song).toContain("Cobertura baja (23 %");
+    expect(song).toContain('data-song-view="options">Ir a Opciones para corregirlo');
+    expect(song.indexOf('class="timestamps-warning"')).toBeLessThan(song.indexOf("song-lyrics"));
+  });
+
   test("renders the saved transposition offset in the song card", () => {
     const song = renderSong(
       makeSong({

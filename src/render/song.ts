@@ -125,6 +125,15 @@ function renderLoader(): string {
   return `<div class="song-loader" role="status" aria-live="polite"><span class="song-loader-spinner" aria-hidden="true"></span><span>Cargando…</span></div>`;
 }
 
+function renderTimestampsWarning(song: Song): string {
+  if (!song.timestampsError) return "";
+  if (song.timestampsStatus !== "partial" && song.timestampsStatus !== "failed") return "";
+  return `<div class="timestamps-warning" role="alert">
+    <p>${escapeHtml(song.timestampsError)}</p>
+    <button type="button" class="secondary" data-song-view="options">Ir a Opciones para corregirlo</button>
+  </div>`;
+}
+
 function renderVideoPanel(song: Song, searchQuery: string): string {
   const video = song.video;
   const busyTimestamps = ["pending", "transcribing", "aligning"].includes(song.timestampsStatus);
@@ -234,6 +243,7 @@ export function renderSong(song: Song, offset: number): string {
          </div>
          <div class="youtube-media-box youtube-player-frame" data-youtube-player aria-label="Video de acompañamiento"></div>
        </div>
+       ${renderTimestampsWarning(song)}
        <div class="youtube-playback-controls" data-youtube-playback-controls hidden>
          <div class="youtube-progress" aria-label="Progreso de la canción">
            <span class="youtube-progress-time" data-youtube-progress-current>0:00</span>

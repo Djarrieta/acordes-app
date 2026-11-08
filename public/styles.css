@@ -1748,6 +1748,24 @@ body.is-song-view .song-lyrics {
   font-style: italic;
 }
 
+.timestamps-warning {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem 1rem;
+  border: 1px solid #e3b7ae;
+  border-radius: 0.85rem;
+  background: #fbeeea;
+  padding: 0.75rem 0.9rem;
+  margin-bottom: 0.85rem;
+}
+
+.timestamps-warning p {
+  margin: 0;
+  flex: 1 1 16rem;
+  color: #8a3126;
+}
+
 
 
 .editor-line-form button {
