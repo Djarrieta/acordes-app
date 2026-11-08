@@ -1,7 +1,6 @@
 # Plan: persistencia de letras, acordes y timestamps
 
-Estado: **diseño cerrado; fase 0 (spikes) completada con GO**. Pendiente:
-implementación de la fase 1.
+Estado: **fase 0 (spikes) completada con GO y fase 1 implementada y desplegada**. Pendiente: fase 2 (Google OAuth) y decisiones opcionales de la sección 13.
 
 Objetivo: dejar de depender del estado en memoria y de `localStorage` para el
 contenido de la canción. Guardar en SQLite la letra, los acordes y los tiempos,
@@ -12,6 +11,9 @@ transcripción del video. El login con Google queda para la fase 2.
 ---
 
 ## 1. Situación actual (verificada en el código)
+
+> Contexto pre-fase 1: este análisis describe el estado antes de la persistencia.
+> Hoy la app persiste en SQLite; ver secciones 9 y 13.
 
 ### 1.1 Posición sobre la letra
 
@@ -558,10 +560,11 @@ puede pasar a la cuenta.
 ### 5.10 Identidad de favoritos y enlaces
 
 - `songs.id` (UUID) es la identidad interna y la que usan las rutas.
-- `source_key` se conserva para migrar favoritos existentes
-  (`acordes-liked-songs` usa hoy el pathname) y para detectar duplicados.
-- El render incluye `data-song-id` (UUID) y `data-source-key`; el JS de favoritos
-  migra la clave antigua a la nueva la primera vez.
+- `source_key` se conserva como clave estable de la canción en LaCuerda y para
+  detectar duplicados.
+- Los favoritos y la transposición viven en la tabla `songs` (`liked`,
+  `liked_at`, `preferred_offset`) compartidos por todos los visitantes; el
+  cliente no usa `localStorage`.
 
 ### 5.11 Autenticación (fase 2)
 
@@ -576,7 +579,8 @@ Reutilizar el patrón de `store-bun-sqlite-htmx/src/auth/`:
 - Sin roles en esta app: cualquier usuario Google autenticado puede editar.
 - Modelo compartido: no hay migración invitado → usuario. Las ediciones
   anónimas previas quedan con `actor = NULL`.
-- Fase 2 puede además mover favoritos y transposición a la cuenta.
+- Los favoritos y la transposición ya están en la base compartida (sin auth);
+  en fase 2 solo se decidirá si se quedan compartidos o se mueven a la cuenta.
 
 ---
 
@@ -603,7 +607,10 @@ Reutilizar el patrón de `store-bun-sqlite-htmx/src/auth/`:
 | POST | `/songs/:id/chords/:chordId` | Editar nombre/columna |
 | POST | `/songs/:id/chords/:chordId/delete` | Eliminar acorde |
 | POST | `/songs/:id/meta` | Título/artista |
-| POST | `/songs/:id/transpose` | Render con offset (sin mutar estado) |
+| POST | `/songs/:id/transpose` | Render con offset y persiste la preferencia en `songs.preferred_offset` |
+| GET | `/favorites` | Fragmento con las canciones marcadas como favoritas |
+| GET | `/favorites/state` | JSON `{ liked: source_key[], offsets: Record<source_key, offset> }` |
+| POST | `/favorites/toggle` | Alterna el favorito de una canción (form `sourceKey`) |
 
 HTMX devuelve fragmentos HTML. Para timestamps se puede devolver `204` o un
 fragmento pequeño con el estado. Cada POST de edición incluye la `version`
@@ -623,7 +630,9 @@ y el cliente recarga el editor.
   - Polling de `/songs/:id/status` solo mientras `video_status='searching'` o
     `timestamps_status` esté en curso; al terminar, recargar el reproductor.
   - Botón **Generar marcas** que llama a `/songs/:id/timestamps/auto`.
-  - Mantener favoritos (`acordes-liked-songs`) en `localStorage` durante fase 1.
+  - Favoritos y transposición vía la base de datos (`/favorites/toggle`,
+    `/favorites/state`); el cliente no usa `localStorage`.
+  - Editor inline en una vista propia de la canción (sin modal).
 - `src/routes/home.ts`: mover el JS inline a `public/` si crece; el editor
   necesita su propio archivo. No es obligatorio en la primera iteración.
 - Renderer: quitar `data-song-id` basado solo en URL y usar `data-song-id` (UUID)
@@ -633,14 +642,11 @@ y el cliente recarga el editor.
 
 ## 8. Migración de datos existentes
 
-- `localStorage["acordes-youtube-videos"]`: al cargar una canción, si el
-  navegador tiene video/timestamps y la canción en DB no tiene video, ofrecer
-  importarlos. Como el modelo es compartido, se pide confirmación y se aplican a
-  la canción común (no automático).
-- `localStorage["acordes-liked-songs"]`: se mantiene en fase 1. En fase 2 se
-  importa a `favorites` del usuario.
-- Transposición: se mantiene en `localStorage` en fase 1; se pasa como `offset`
-  al render. En fase 2, tabla `song_preferences(user_id, song_id, offset)`.
+- `localStorage["acordes-youtube-videos"]`: importado a la base (ya no se usa).
+- `localStorage["acordes-liked-songs"]`: los favoritos ya viven en
+  `songs.liked` (base compartida); ya no se migra desde el navegador.
+- Transposición: se guarda en `songs.preferred_offset` y se aplica al cargar
+  la canción (`/load` y `/transpose`).
 - No hay datos en servidor que migrar (el `Map` es efímero).
 
 ---
@@ -656,25 +662,35 @@ y el cliente recarga el editor.
   `yt-dlp` 6/6 sin 429; el top-1 puede no tener subtítulos.
 - 0.4 Cerrar las decisiones de la sección 13 (hecho; ver sección 13).
 
-### Fase 1 — Persistencia y edición sin auth
+### Fase 1 — Persistencia y edición sin auth (completada y desplegada)
 
 - 1.1 `db.ts`, `config.ts`, esquema, volumen Docker, `.gitignore`, backup.
+   (Scripts `db:backup`/`db:reset` disponibles; sin cron programado todavía.)
 - 1.2 Repositorio de canciones; `POST /load` con upsert; render desde DB;
-  eliminar `src/state.ts` y el estado mutable de transposición.
+   eliminado el estado mutable en memoria de transposición.
 - 1.3 Búsqueda de video automática (top-1) + estado + polling + selección de
-  video. Depende del go/no-go del spike 0.3.
-- 1.4 Alineación bajo demanda ("Generar marcas"), timestamps manuales
-  persistidos y reescritura de `public/youtube.js`.
-- 1.5 Editor de letra y acordes con validación, concurrencia y auditoría.
+   video con candidatos («Usar otro video»).
+- 1.4 Alineación automática al encontrar video: transcribe y alinea probando
+   los candidatos en orden; si falla, error visible y reintento manual;
+   timestamps manuales persistidos y `public/youtube.js` sin `localStorage`.
+   Los botones «Generar marcas»/«Reintentar marcas» siguen como reintento
+   manual.
+- 1.5 Editor inline (vista propia, sin modal) de letra y acordes con validación,
+   concurrencia y auditoría.
 - 1.6 Refresco desde LaCuerda.
 - 1.7 Pruebas, documentación, despliegue y verificación en la URL pública.
+- Favoritos y transposición en la base compartida (`songs.liked`,
+  `songs.preferred_offset`) sin `localStorage`, con endpoints `/favorites`,
+  `/favorites/state` y `/favorites/toggle` (desviación acordada: el plan
+  original los dejaba en `localStorage` hasta fase 2).
 
 ### Fase 2 — Google OAuth
 
 - 2.1 Tablas y flujo OAuth (PKCE) según `store-bun-sqlite-htmx`.
 - 2.2 Exigir login para editar; las ediciones anónimas previas se conservan con
   `actor = NULL`.
-- 2.3 Favoritos y transposición en la cuenta.
+- 2.3 Favoritos y transposición en la cuenta (ya están en la base compartida;
+  queda decidir si se quedan compartidos o se mueven a la cuenta).
 
 ---
 
@@ -755,8 +771,10 @@ y el cliente recarga el editor.
 1. **Modelo de propiedad**: canción compartida. Una fila por `(source,
    source_key)`; cualquier visitante anónimo edita la misma. En fase 2 el login
    solo identifica al autor. Sin `guest_ref` ni migración de invitado.
-2. **Timestamps**: bajo demanda. La búsqueda de video es automática; la
-   transcripción/alineación se lanza con **Generar marcas**.
+2. **Timestamps**: automáticos al encontrar video (incluido al vincular uno
+   manualmente); si ningún candidato tiene subtítulos utilizables, error visible
+   con opción manual. Los botones «Generar marcas»/«Reintentar marcas» quedan
+   como reintento.
 3. **Selección de video**: top-1 automático con opción de cambiarlo; si falla la
    transcripción, se muestran los candidatos.
 4. **Fuente de transcripción**: `yt-dlp` + innertube, sin API key.
@@ -773,8 +791,9 @@ y el cliente recarga el editor.
 8. **Alcance del editor**: fase 1.4 timestamps + texto; fase 1.5 acordes
    completos. Si prefieres todo de una vez, se puede, pero aumenta el riesgo.
 9. **Edición y transposición**: siempre en tonalidad original.
-10. **Favoritos**: se quedan en `localStorage` hasta fase 2 (en modelo compartido
-    no tiene sentido moverlos a DB).
+10. **Favoritos**: base de datos compartida (`songs.liked`) sin `localStorage`,
+    a petición expresa (cambia el plan original de dejarlos en el navegador
+    hasta fase 2).
 11. **Listado de canciones**: no se hace en fase 1; se puede añadir después.
 12. **Backup**: base descartable pre-1.0 + backup diario; sin migraciones
     versionadas todavía.
@@ -800,8 +819,8 @@ esos valores.
   demás acordes.
 - Las marcas manuales y las ediciones se guardan en SQLite y se ven desde otro
   navegador (modelo compartido).
-- La búsqueda de video no bloquea la carga de la letra; la alineación es bajo
-  demanda y muestra su estado.
+- La búsqueda de video no bloquea la carga de la letra; la alineación es
+  automática y muestra su estado.
 - "Generar marcas" produce timestamps `ready`, `partial` o un error visible; no
   pisa marcas manuales.
 - Cambiar de video limpia las marcas anteriores y permite volver a generarlas.
@@ -827,15 +846,6 @@ esos valores.
 
 ## 16. Próximo paso
 
-Fase 0 cerrada: decisiones tomadas y spike con **GO**. Siguiente: fase 1.1.
-
-1. Crear `src/db.ts` y `src/config.ts` con `bun:sqlite`, PRAGMAs, `newId()`,
-   `now()`, `transaction()` y `PRAGMA user_version`.
-2. Añadir el esquema de la sección 4 y el volumen `./data:/app/data` en
-   `docker-compose.yml`; ignorar `data/` en git.
-3. Implementar el repositorio de canciones y migrar `POST /load` a upsert +
-   lectura desde SQLite, sin `src/state.ts`.
-4. Verificar con `bun run test` y `bun run typecheck`; desplegar y comprobar que
-   una canción sobrevive a `docker compose up -d --build`.
-5. Continuar con 1.3 (búsqueda de video), 1.4 (marcas), 1.5 (editor), 1.6
-   (refresco) y 1.7 (pruebas/despliegue).
+Fase 1 completada y desplegada. Siguiente: fase 2 (Google OAuth), cuando lo
+decidas; queda por decidir si favoritos/transposición se quedan compartidos o
+se mueven a la cuenta.
