@@ -462,7 +462,65 @@ h1 {
 }
 
 .song-back-button {
+  display: inline-flex;
+  border: 1px solid #d6d1c6;
+  background: transparent;
+  color: #3e3a34;
+  padding: 0.45rem 0.65rem;
+  font-size: 0.82rem;
+}
+
+.song-playback-layout {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.song-aside {
+  display: flex;
+  flex-direction: column;
+  border-top: 1px solid #ece8de;
+}
+
+.song-options {
+  border-top: 1px solid #ece8de;
+  background: #fffefa;
+}
+
+.song-options-summary {
+  display: flex;
+  min-height: 3rem;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  cursor: pointer;
+  list-style: none;
+  padding: 0.65rem 1.5rem;
+  font-weight: 700;
+}
+
+.song-options-summary::-webkit-details-marker {
   display: none;
+}
+
+.song-options-summary::after {
+  color: #52705c;
+  content: "+";
+  font-size: 1.2rem;
+}
+
+.song-options[open] .song-options-summary::after {
+  content: "−";
+}
+
+.song-options-hint {
+  color: #66625a;
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.song-options-panel {
+  border-top: 1px solid #ece8de;
 }
 
 .song-header h2 {
@@ -1056,7 +1114,9 @@ h1 {
   white-space: nowrap;
 }
 
-.song-card > .youtube-section[open].is-marking:not(.is-playing) ~ .song-lyrics .chord-trigger[data-chord-time] .chord-time-marker {
+.song-card .youtube-section[open].is-marking:not(.is-playing) ~ .song-lyrics .chord-trigger[data-chord-time] .chord-time-marker,
+.song-card .song-playback-layout .youtube-section[open].is-marking:not(.is-playing) ~ .song-lyrics .chord-trigger[data-chord-time] .chord-time-marker,
+.song-card:has(.youtube-section[open].is-marking:not(.is-playing)) .song-lyrics .chord-trigger[data-chord-time] .chord-time-marker {
   display: block;
 }
 
@@ -1124,10 +1184,10 @@ body.is-song-view #song-container[hidden] {
 }
 
 body.is-song-view .song-card {
-  display: grid;
+  display: flex;
   width: 100%;
   min-height: 0;
-  grid-template-rows: auto auto auto auto auto minmax(0, 1fr);
+  flex-direction: column;
   overflow: hidden;
   border-radius: 0.75rem;
 }
@@ -1150,17 +1210,13 @@ body.is-song-view .song-header h2 {
   white-space: nowrap;
 }
 
+body.is-song-view .song-title-block,
 body.is-song-view .song-header > div {
   min-width: 0;
 }
 
 body.is-song-view .song-back-button {
   display: inline-flex;
-  border: 1px solid #d6d1c6;
-  background: transparent;
-  color: #3e3a34;
-  padding: 0.45rem 0.65rem;
-  font-size: 0.82rem;
 }
 
 body.is-song-view .song-favorite-toggle {
@@ -1168,9 +1224,25 @@ body.is-song-view .song-favorite-toggle {
   height: 2.35rem;
 }
 
+body.is-song-view .song-playback-layout {
+  display: flex;
+  min-height: 0;
+  flex: 1;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+body.is-song-view .song-aside {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  overflow: auto;
+  border-bottom: 1px solid #ece8de;
+}
+
 body.is-song-view .song-controls {
   gap: 0.35rem;
-  padding: 0.2rem 0.8rem 0.45rem;
+  padding: 0.5rem 0.8rem;
 }
 
 body.is-song-view .song-controls button {
@@ -1189,14 +1261,22 @@ body.is-song-view .youtube-media-pair {
   min-height: 0;
   gap: 0.6rem;
   padding: 0.4rem;
+  border-top: 0;
+}
+
+body.is-song-view .youtube-media-pair[hidden],
+body.is-song-view .youtube-playback-controls[hidden] {
+  display: none;
 }
 
 body.is-song-view .youtube-media-box {
-  height: clamp(9rem, 28dvh, 19rem);
+  height: clamp(8rem, 22dvh, 14rem);
+  max-width: none;
 }
 
 body.is-song-view .youtube-playback-controls {
   padding: 0.4rem;
+  border-top: 0;
 }
 
 body.is-song-view .youtube-playback-controls[hidden] {
@@ -1208,12 +1288,18 @@ body.is-song-view .youtube-play-button {
   padding: 0.5rem 1rem;
 }
 
+body.is-song-view .song-options-summary {
+  min-height: 2.4rem;
+  padding: 0.35rem 0.8rem;
+}
+
 body.is-song-view .youtube-section {
   min-height: 0;
+  border-top: 1px solid #ece8de;
 }
 
 body.is-song-view .youtube-summary {
-  min-height: 2.6rem;
+  min-height: 2.4rem;
   padding: 0.35rem 0.8rem;
 }
 
@@ -1301,6 +1387,7 @@ body.is-song-view .chord-mark-toggle {
 
 body.is-song-view .song-lyrics {
   min-height: 0;
+  flex: 1;
   overflow: auto;
   overscroll-behavior: contain;
   padding: 0.7rem 0.85rem;
@@ -1591,16 +1678,38 @@ body.is-song-view .song-lyrics {
 }
 
 @media (min-width: 900px) {
+  body.is-song-view .song-playback-layout {
+    display: grid;
+    min-height: 0;
+    flex: 1;
+    grid-template-columns: minmax(18rem, 24rem) minmax(0, 1fr);
+    align-items: stretch;
+    overflow: hidden;
+  }
+
+  body.is-song-view .song-aside {
+    min-height: 0;
+    overflow: auto;
+    border-right: 1px solid #ece8de;
+    border-bottom: 0;
+    background: #fcfaf5;
+  }
+
+  body.is-song-view .song-options {
+    border-top: 1px solid #ece8de;
+  }
+
   body.is-song-view .song-lyrics {
-    width: min(100%, 44rem);
+    width: 100%;
     min-height: 0;
     max-height: 100%;
     align-self: stretch;
-    justify-self: center;
+    justify-self: stretch;
     overflow-x: hidden;
     overflow-y: auto;
-    border: 1px solid #ece8de;
-    border-radius: 0.75rem;
+    border-top: 0;
+    border: 0;
+    border-radius: 0;
     background: #fffefa;
     padding: clamp(1rem, 2.2vh, 1.6rem) clamp(1.5rem, 3.5vw, 2.75rem);
     font-size: clamp(1.05rem, 2vh, 1.4rem);

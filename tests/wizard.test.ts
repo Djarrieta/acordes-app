@@ -7,7 +7,7 @@ describe("song wizard", () => {
     const page = await homePage().text();
 
     expect(page).toContain('aria-label="Pasos de la canción"');
-    expect(page).toContain('href="/public/styles.css?v=youtube-15"');
+    expect(page).toContain('href="/public/styles.css?v=playback-layout-1"');
     expect(page).toContain('src="/public/youtube.js?v=10"');
     expect(page).toContain('data-wizard-step="2"');
     expect(page).toContain(">Busca</span>");
@@ -35,6 +35,8 @@ describe("song wizard", () => {
 
     expect(song).toContain('<h2 id="selected-song-title" tabindex="-1">Canción de prueba</h2>');
     expect(song).toContain('class="song-back-button secondary" data-wizard-search');
+    expect(song).toContain("← Volver");
+    expect(song).toContain("aria-label=\"Volver a la búsqueda\"");
     expect(song).toContain('data-favorite-toggle data-song-id="/artista/cancion.shtml"');
     expect(song).toContain('<svg aria-hidden="true" viewBox="0 0 24 24"');
     expect(song).toContain('aria-pressed="false"');
@@ -43,6 +45,9 @@ describe("song wizard", () => {
     expect(song).toContain('data-song-id="/artista/cancion.shtml" data-offset="0"');
     expect(song).toContain('data-youtube-song="/artista/cancion.shtml"');
     expect(song).toContain('href="https://www.youtube.com/results?search_query=Artista%20Canci%C3%B3n%20de%20prueba"');
+    expect(song).toContain('class="song-playback-layout"');
+    expect(song).toContain('class="song-aside"');
+    expect(song).toContain('class="song-options" data-song-options open');
     expect(song).toContain("<details class=\"youtube-section\"");
     expect(song).not.toContain("<details class=\"youtube-section\" open");
     expect(song).toContain('data-chord-mark-toggle aria-pressed="false"');

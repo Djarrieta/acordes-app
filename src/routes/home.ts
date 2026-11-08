@@ -7,7 +7,7 @@ export function homePage(): Response {
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="color-scheme" content="light">
   <title>Acordes — transpositor</title>
-  <link rel="stylesheet" href="/public/styles.css?v=youtube-15">
+  <link rel="stylesheet" href="/public/styles.css?v=playback-layout-1">
   <script src="https://unpkg.com/htmx.org@2.0.4"></script>
   <script src="/public/youtube.js?v=10" defer></script>
   <script>
@@ -33,6 +33,10 @@ export function homePage(): Response {
       const card = target.querySelector(".song-card");
       if (["/load", "/transpose", "/reset"].includes(event.detail.requestConfig?.path)) {
         saveTranspositionPreference(card);
+      }
+      const options = target.querySelector("[data-song-options]");
+      if (options instanceof HTMLDetailsElement) {
+        options.open = !window.matchMedia("(max-width: 899px)").matches;
       }
       updateWizard(2);
       document.getElementById("search-panel").hidden = true;

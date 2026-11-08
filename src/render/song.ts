@@ -119,56 +119,69 @@ export function renderSong(state: SongState): string {
 
   return `<section class="song-card" aria-label="Canción transpuesta" data-song-id="${songId}" data-offset="${offset}">
   <header class="song-header">
-    <div><p class="eyebrow">${escapeHtml(state.parsed.artist)}</p><h2 id="selected-song-title" tabindex="-1">${escapeHtml(state.parsed.title)}</h2></div>
+    <div class="song-title-block"><p class="eyebrow">${escapeHtml(state.parsed.artist)}</p><h2 id="selected-song-title" tabindex="-1">${escapeHtml(state.parsed.title)}</h2></div>
     <div class="song-header-actions">
-      <button type="button" class="song-back-button secondary" data-wizard-search>Busca</button>
+      <button type="button" class="song-back-button secondary" data-wizard-search aria-label="Volver a la búsqueda">← Volver</button>
       <button class="favorite-toggle song-favorite-toggle" type="button" data-favorite-toggle data-song-id="${songId}" data-song-title="${escapeHtml(state.parsed.title)}" data-song-artist="${escapeHtml(state.parsed.artist)}" aria-label="Añadir ${escapeHtml(state.parsed.title)} a canciones que me gustan" title="Añadir a canciones que me gustan" aria-pressed="false"><svg aria-hidden="true" viewBox="0 0 24 24" focusable="false"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78Z"/></svg></button>
     </div>
   </header>
-  <div class="song-controls" aria-label="Transponer canción">
-    ${controls}
-    <button type="button" class="secondary" hx-post="/reset" hx-vals='{"id":"${id}"}' hx-target="#song-container" hx-swap="innerHTML">Original</button>
-    <output class="transpose-status">${transpositionLabel(state.offset)}</output>
-  </div>
-  <div class="youtube-media-pair" data-youtube-media hidden>
-    <div class="youtube-media-box accompaniment-chord-box" id="accompaniment-chord-viewer" aria-live="polite">
-      <p class="accompaniment-chord-placeholder">El acorde actual aparecerá aquí cuando empiece la reproducción.</p>
-    </div>
-    <div class="youtube-media-box youtube-player-frame" data-youtube-player aria-label="Video de acompañamiento"></div>
-  </div>
-  <div class="youtube-playback-controls" data-youtube-playback-controls hidden>
-    <div class="youtube-progress" aria-label="Progreso de la canción">
-      <span class="youtube-progress-time" data-youtube-progress-current>0:00</span>
-      <div class="youtube-progress-track">
-        <input type="range" class="youtube-progress-slider" data-youtube-progress min="0" max="0" step="0.1" value="0" aria-label="Posición de la canción" disabled>
+  <div class="song-playback-layout">
+    <aside class="song-aside" aria-label="Acorde y opciones">
+      <div class="youtube-media-pair" data-youtube-media hidden>
+        <div class="youtube-media-box accompaniment-chord-box" id="accompaniment-chord-viewer" aria-live="polite">
+          <p class="accompaniment-chord-placeholder">El acorde actual aparecerá aquí cuando empiece la reproducción.</p>
+        </div>
+        <div class="youtube-media-box youtube-player-frame" data-youtube-player aria-label="Video de acompañamiento"></div>
       </div>
-      <span class="youtube-progress-time" data-youtube-progress-duration>0:00</span>
-    </div>
-    <button type="button" class="youtube-play-button" data-youtube-play disabled aria-label="Reproducir audio">▶ <span>Reproducir audio</span></button>
+      <div class="youtube-playback-controls" data-youtube-playback-controls hidden>
+        <div class="youtube-progress" aria-label="Progreso de la canción">
+          <span class="youtube-progress-time" data-youtube-progress-current>0:00</span>
+          <div class="youtube-progress-track">
+            <input type="range" class="youtube-progress-slider" data-youtube-progress min="0" max="0" step="0.1" value="0" aria-label="Posición de la canción" disabled>
+          </div>
+          <span class="youtube-progress-time" data-youtube-progress-duration>0:00</span>
+        </div>
+        <button type="button" class="youtube-play-button" data-youtube-play disabled aria-label="Reproducir audio">▶ <span>Reproducir audio</span></button>
+      </div>
+      <details class="song-options" data-song-options open>
+        <summary class="song-options-summary">
+          <span>Opciones</span>
+          <span class="song-options-hint">Transposición y acompañamiento</span>
+        </summary>
+        <div class="song-options-panel">
+          <div class="song-controls" aria-label="Transponer canción">
+            ${controls}
+            <button type="button" class="secondary" hx-post="/reset" hx-vals='{"id":"${id}"}' hx-target="#song-container" hx-swap="innerHTML">Original</button>
+            <output class="transpose-status">${transpositionLabel(state.offset)}</output>
+          </div>
+          <details class="youtube-section" data-youtube-song="${songId}">
+            <summary class="youtube-summary">
+              <span><span class="eyebrow">Acompañamiento</span><strong>YouTube</strong></span>
+              <span class="youtube-summary-state" data-youtube-summary-state>Configurar audio y marcas</span>
+            </summary>
+            <div class="youtube-panel" aria-label="Opciones de acompañamiento">
+              <div class="youtube-header">
+                <p>Vincula un video para escuchar la canción mientras ves los acordes.</p>
+                <a class="youtube-search-link" href="https://www.youtube.com/results?search_query=${searchQuery}" target="_blank" rel="noopener noreferrer">Buscar en YouTube</a>
+              </div>
+              <form class="youtube-link-form">
+                <label for="youtube-url">Pega el enlace del video</label>
+                <div class="youtube-link-row">
+                  <input id="youtube-url" name="url" type="url" inputmode="url" placeholder="https://www.youtube.com/watch?v=…" autocomplete="url" required>
+                  <button type="submit">Vincular video</button>
+                </div>
+                <p class="youtube-status" data-youtube-status role="status" aria-live="polite">Busca un video, copia su enlace y pégalo aquí.</p>
+              </form>
+              <button type="button" class="youtube-unlink secondary" data-youtube-unlink hidden>Quitar video</button>
+              <button type="button" class="chord-mark-toggle" data-chord-mark-toggle aria-pressed="false" disabled>Activar marcas de acordes</button>
+              <p class="youtube-help">Con las marcas activadas, pulsa cada acorde mientras suena para asignarle el tiempo actual. Al cerrar este panel, los acordes vuelven a abrir sus diagramas.</p>
+            </div>
+          </details>
+        </div>
+      </details>
+    </aside>
+    <div class="song song-lyrics" aria-label="Letra y acordes">${lyrics}</div>
   </div>
-  <details class="youtube-section" data-youtube-song="${songId}">
-    <summary class="youtube-summary">
-      <span><span class="eyebrow">Acompañamiento</span><strong>YouTube</strong></span>
-      <span class="youtube-summary-state" data-youtube-summary-state>Configurar audio y marcas</span>
-    </summary>
-    <div class="youtube-panel" aria-label="Opciones de acompañamiento">
-      <div class="youtube-header">
-        <p>Vincula un video para escuchar la canción mientras ves los acordes.</p>
-        <a class="youtube-search-link" href="https://www.youtube.com/results?search_query=${searchQuery}" target="_blank" rel="noopener noreferrer">Buscar en YouTube</a>
-      </div>
-    <form class="youtube-link-form">
-      <label for="youtube-url">Pega el enlace del video</label>
-      <div class="youtube-link-row">
-        <input id="youtube-url" name="url" type="url" inputmode="url" placeholder="https://www.youtube.com/watch?v=…" autocomplete="url" required>
-        <button type="submit">Vincular video</button>
-      </div>
-      <p class="youtube-status" data-youtube-status role="status" aria-live="polite">Busca un video, copia su enlace y pégalo aquí.</p>
-    </form>
-    <button type="button" class="youtube-unlink secondary" data-youtube-unlink hidden>Quitar video</button>
-    <button type="button" class="chord-mark-toggle" data-chord-mark-toggle aria-pressed="false" disabled>Activar marcas de acordes</button>
-    <p class="youtube-help">Con las marcas activadas, pulsa cada acorde mientras suena para asignarle el tiempo actual. Al cerrar este panel, los acordes vuelven a abrir sus diagramas.</p>
-    </div>
-  </details>
   <dialog id="chord-modal" class="chord-modal" aria-labelledby="chord-modal-title">
     <div class="chord-modal-content">
       <header class="chord-modal-header">
@@ -180,7 +193,6 @@ export function renderSong(state: SongState): string {
       </div>
     </div>
   </dialog>
-  <div class="song song-lyrics" aria-label="Letra y acordes">${lyrics}</div>
 </section>`;
 }
 
