@@ -8,14 +8,18 @@ export function homePage(): Response {
   <meta name="color-scheme" content="light">
   <title>Acordes — transpositor</title>
   <link rel="icon" href="data:,">
-  <link rel="stylesheet" href="/public/styles.css?v=playback-3">
+  <link rel="stylesheet" href="/public/styles.css?v=playback-4">
   <script src="https://unpkg.com/htmx.org@2.0.4"></script>
-  <script src="/public/youtube.js?v=16" defer></script>
-  <script src="/public/editor.js?v=1" defer></script>
+  <script src="/public/youtube.js?v=17" defer></script>
+  <script src="/public/editor.js?v=2" defer></script>
   <script>
     let likedSourceKeys = new Set();
     let onlyFavorites = false;
-    let optionsOpenBeforeSwap = null;
+    let previousView = null;
+    window.setSongView = (view) => {
+      const card = document.querySelector("#song-container .song-card");
+      if (card) card.dataset.view = view;
+    };
     htmx.config.responseHandling = [
       { code: "204", swap: false },
       { code: "[23]..", swap: true },
@@ -32,13 +36,10 @@ export function homePage(): Response {
       if (target?.id !== "song-container" || !target.querySelector(".song-card")) return;
       const card = target.querySelector(".song-card");
       const requestPath = event.detail.requestConfig?.path ?? "";
-      const options = target.querySelector("[data-song-options]");
-      if (options instanceof HTMLDetailsElement) {
-        const openByDefault = !window.matchMedia("(max-width: 899px)").matches;
-        const isNewSong = requestPath === "/load";
-        options.open = isNewSong || optionsOpenBeforeSwap === null ? openByDefault : optionsOpenBeforeSwap;
+      if (card.dataset.view !== "loader") {
+        card.dataset.view = requestPath === "/load" ? "player" : (previousView !== "loader" && previousView ? previousView : "player");
       }
-      optionsOpenBeforeSwap = null;
+      previousView = null;
       updateWizard(2);
       document.getElementById("search-panel").hidden = true;
       target.hidden = false;
@@ -49,8 +50,7 @@ export function homePage(): Response {
     });
     document.addEventListener("htmx:beforeSwap", (event) => {
       if (event.detail.target?.id !== "song-container") return;
-      const current = document.querySelector("[data-song-options]");
-      optionsOpenBeforeSwap = current instanceof HTMLDetailsElement ? current.open : null;
+      previousView = document.querySelector("#song-container .song-card")?.dataset.view ?? null;
     });
     document.addEventListener("htmx:beforeRequest", (event) => {
       if (event.detail?.target?.id === "song-container") {
@@ -72,6 +72,11 @@ export function homePage(): Response {
       }
     });
     document.addEventListener("click", (event) => {
+      if (event.target instanceof Element && event.target.closest("[data-song-view]")) {
+        const view = event.target.closest("[data-song-view]").dataset.songView;
+        window.setSongView?.(view);
+        return;
+      }
       if (event.target instanceof Element && event.target.closest("[data-wizard-search]")) {
         const searchPanel = document.getElementById("search-panel");
         const songContainer = document.getElementById("song-container");

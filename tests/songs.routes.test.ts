@@ -78,17 +78,22 @@ describe("song routes", () => {
     expect(getSong(db, song.id)!.preferredOffset).toBe(0);
   });
 
-  test("shows the loading overlay while the song is busy preparing", async () => {
+  test("shows only the loader while the song is busy preparing", async () => {
     setVideoStatus(db, song.id, "searching");
     const busy = await route(request(`/songs/${song.id}/player?offset=0`));
     const busyHtml = await busy.text();
-    expect(busyHtml).toContain("song-loading-overlay");
+    expect(busyHtml).toContain('data-view="loader"');
+    expect(busyHtml).toContain('data-view-panel="loader"');
     expect(busyHtml).toContain("Preparando la canción");
+    expect(busyHtml).not.toContain("song-lyrics");
+    expect(busyHtml).toContain('data-youtube-song="' + song.id + '"');
 
     setVideoStatus(db, song.id, "failed", "sin video");
     const ready = await route(request(`/songs/${song.id}/player?offset=0`));
     const readyHtml = await ready.text();
-    expect(readyHtml).not.toContain("song-loading-overlay");
+    expect(readyHtml).toContain('data-view="player"');
+    expect(readyHtml).toContain("song-lyrics");
+    expect(readyHtml).not.toContain('data-view-panel="loader" role="status"');
   });
 
   test("returns the status payload for polling", async () => {

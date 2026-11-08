@@ -440,6 +440,8 @@ h1 {
 
 .song-card {
   position: relative;
+  display: flex;
+  flex-direction: column;
   overflow: hidden;
   border: 1px solid #e4dfd4;
   border-radius: 1rem;
@@ -447,25 +449,102 @@ h1 {
   box-shadow: 0 12px 35px rgb(65 53 33 / 6%);
 }
 
-.song-loading-overlay {
-  position: absolute;
-  inset: 0;
-  z-index: 20;
-  display: grid;
-  place-items: center;
-  background: #fffefa;
+.song-view {
+  display: none;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
 }
 
-.song-loading-overlay .song-loader {
-  min-height: 100%;
+.song-card[data-view="player"] [data-view-panel="player"],
+.song-card[data-view="options"] [data-view-panel="options"],
+.song-card[data-view="editor"] [data-view-panel="editor"],
+.song-card[data-view="loader"] [data-view-panel="loader"] {
+  display: flex;
+}
+
+.song-main {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.song-view-loader {
+  align-items: center;
+  justify-content: center;
+  min-height: 14rem;
+}
+
+.song-view-options,
+.song-view-editor {
+  overflow: auto;
+}
+
+.song-view-options .option-group {
+  border-top: 1px solid #ece8de;
+  padding: 0.9rem 1.5rem 1.1rem;
+  display: grid;
+  gap: 0.6rem;
+}
+
+.song-view-options .youtube-panel {
+  display: flex;
+  flex-direction: column;
+}
+
+.song-view-options .option-heading {
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+}
+
+.option-hint {
+  margin: 0;
+  color: #66625a;
+  font-size: 0.85rem;
+  line-height: 1.5;
+}
+
+.options-nav,
+.editor-nav {
+  padding: 0.6rem 1.5rem 0;
+}
+
+.player-toolbar {
+  display: flex;
+  gap: 0.5rem;
+  padding: 0.45rem 0.8rem;
+  background: #fffefa;
+  border-top: 1px solid #ece8de;
+}
+
+.editor-view-header {
+  padding: 0.9rem 1.5rem 0.6rem;
+}
+
+.editor-view-header h3 {
+  margin: 0;
+  font-size: 1.1rem;
+  letter-spacing: -0.02em;
+}
+
+.song-view-editor #song-editor-body {
+  padding: 0 1.5rem 1.5rem;
 }
 
 .song-header {
+  position: sticky;
+  top: 0;
+  z-index: 15;
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
   gap: 1rem;
   padding: 1.4rem 1.5rem 1rem;
+  background: #fffefa;
+  border-bottom: 1px solid #ece8de;
 }
 
 .song-header-actions {
@@ -482,59 +561,6 @@ h1 {
   color: #3e3a34;
   padding: 0.45rem 0.65rem;
   font-size: 0.82rem;
-}
-
-.song-playback-layout {
-  display: flex;
-  flex-direction: column;
-  min-height: 0;
-}
-
-.song-aside {
-  display: flex;
-  flex-direction: column;
-  border-top: 1px solid #ece8de;
-}
-
-.song-options {
-  border-top: 1px solid #ece8de;
-  background: #fffefa;
-}
-
-.song-options-summary {
-  display: flex;
-  min-height: 3rem;
-  align-items: center;
-  justify-content: space-between;
-  gap: 1rem;
-  cursor: pointer;
-  list-style: none;
-  padding: 0.65rem 1.5rem;
-  font-weight: 700;
-}
-
-.song-options-summary::-webkit-details-marker {
-  display: none;
-}
-
-.song-options-summary::after {
-  color: #52705c;
-  content: "+";
-  font-size: 1.2rem;
-}
-
-.song-options[open] .song-options-summary::after {
-  content: "−";
-}
-
-.song-options-hint {
-  color: #66625a;
-  font-size: 0.8rem;
-  font-weight: 600;
-}
-
-.song-options-panel {
-  border-top: 1px solid #ece8de;
 }
 
 .song-header h2 {
@@ -1197,22 +1223,6 @@ body.is-song-view .song-favorite-toggle {
   height: 2.35rem;
 }
 
-body.is-song-view .song-playback-layout {
-  display: flex;
-  min-height: 0;
-  flex: 1;
-  flex-direction: column;
-  overflow: hidden;
-}
-
-body.is-song-view .song-aside {
-  display: flex;
-  min-width: 0;
-  flex-direction: column;
-  overflow: auto;
-  border-bottom: 1px solid #ece8de;
-}
-
 body.is-song-view .song-controls {
   gap: 0.35rem;
   padding: 0.5rem 0.8rem;
@@ -1261,18 +1271,9 @@ body.is-song-view .youtube-play-button {
   padding: 0.5rem 1rem;
 }
 
-body.is-song-view .song-options-summary {
-  min-height: 2.4rem;
-  padding: 0.35rem 0.8rem;
-}
-
 body.is-song-view .youtube-section {
   min-height: 0;
   border-top: 1px solid #ece8de;
-}
-
-body.is-song-view .song-aside > * {
-  flex-shrink: 0;
 }
 
 body.is-song-view .youtube-section .youtube-panel {
@@ -1284,10 +1285,6 @@ body.is-song-view .youtube-section .youtube-panel {
 
 body.is-song-view .youtube-panel > * {
   margin: 0;
-}
-
-body.is-song-view .song-card.is-playing .song-options {
-  border-top: 1px solid #ece8de;
 }
 
 body.is-song-view .song-lyrics {
@@ -1580,11 +1577,6 @@ body.is-song-view .song-lyrics {
 }
 
 @media (max-width: 899px) {
-  body.is-song-view .song-aside {
-    flex: 0 1 auto;
-    max-height: 50dvh;
-  }
-
   body.is-song-view .song-lyrics {
     flex: 1 1 0;
     overflow-x: hidden;
@@ -1601,27 +1593,6 @@ body.is-song-view .song-lyrics {
 }
 
 @media (min-width: 900px) {
-  body.is-song-view .song-playback-layout {
-    display: grid;
-    min-height: 0;
-    flex: 1;
-    grid-template-columns: minmax(18rem, 24rem) minmax(0, 1fr);
-    align-items: stretch;
-    overflow: hidden;
-  }
-
-  body.is-song-view .song-aside {
-    min-height: 0;
-    overflow: auto;
-    border-right: 1px solid #ece8de;
-    border-bottom: 0;
-    background: #fcfaf5;
-  }
-
-  body.is-song-view .song-options {
-    border-top: 1px solid #ece8de;
-  }
-
   body.is-song-view .song-lyrics {
     width: 100%;
     min-height: 0;
@@ -1653,63 +1624,11 @@ body.is-song-view .song-lyrics {
 }
 
 
-.song-editor {
-  width: min(56rem, calc(100% - 2rem));
-  max-width: none;
-  max-height: min(92vh, 48rem);
-  overflow: auto;
-  border: 1px solid #e4dfd4;
-  border-radius: 1.25rem;
-  background: #fffefa;
-  color: #242323;
-  padding: 0;
-  box-shadow: 0 24px 80px rgb(36 35 35 / 28%);
-}
-
-.song-editor::backdrop {
-  background: rgb(25 29 26 / 60%);
-  backdrop-filter: blur(3px);
-}
-
-.song-editor-content,
 .song-editor-inner {
-  padding: 1.5rem 1.75rem 1.75rem;
+  padding: 0.5rem 0 0;
 }
 
-.song-editor-header {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 1rem;
-  border-bottom: 1px solid #ece8de;
-  padding-bottom: 1rem;
-}
-
-.song-editor-header h2 {
-  margin: 0;
-  font-size: 1.35rem;
-  letter-spacing: -0.035em;
-}
-
-.song-editor-close {
-  display: grid;
-  width: 2.4rem;
-  height: 2.4rem;
-  place-items: center;
-  border: 1px solid #d6d1c6;
-  border-radius: 50%;
-  background: transparent;
-  color: #3e3a34;
-  font-size: 1.5rem;
-  line-height: 1;
-  padding: 0;
-}
-
-.song-editor-close:hover {
-  background: #f2efe8;
-}
-
-.song-editor form {
+.song-editor-inner form {
   margin: 0;
 }
 

@@ -1,7 +1,6 @@
 const VIDEO_ID_PATTERN = /^[a-zA-Z0-9_-]{11}$/;
 
 let activeSection = null;
-let optionsProgrammaticChange = false;
 let player = null;
 let playerVideoId = null;
 let apiLoading = false;
@@ -23,16 +22,8 @@ function songId(section) {
   return songCard(section)?.dataset.songId ?? "";
 }
 
-function optionsElement(section) {
-  return songCard(section)?.querySelector("[data-song-options]") ?? null;
-}
-
-function setOptionsOpen(section, open) {
-  const options = optionsElement(section);
-  if (!(options instanceof HTMLDetailsElement)) return;
-  if (options.open === open) return;
-  optionsProgrammaticChange = true;
-  options.open = open;
+function songView(section) {
+  return songCard(section)?.dataset.view ?? "player";
 }
 
 function setStatus(section, message) {
@@ -109,11 +100,9 @@ function seekToTimestamp(seconds) {
 }
 
 function updateChordControls(section) {
-  const options = optionsElement(section);
-  const optionsOpen = options instanceof HTMLDetailsElement ? options.open : true;
   const ready = Boolean(section?.dataset.videoId && player && player.getPlayerState);
   const toggle = section?.querySelector("[data-chord-mark-toggle]");
-  if (toggle) toggle.disabled = !ready || !optionsOpen;
+  if (toggle) toggle.disabled = !ready;
   const card = songCard(section);
   const timestampsAuto = card?.querySelector("[data-timestamps-auto]");
   const timestampsRetry = card?.querySelector("[data-timestamps-retry]");
@@ -147,12 +136,9 @@ function updateChordControls(section) {
 }
 
 function setMarkMode(section, enabled) {
-  const options = optionsElement(section);
-  const optionsOpen = options instanceof HTMLDetailsElement ? options.open : true;
   markMode = Boolean(
     enabled
     && section
-    && optionsOpen
     && section.dataset.videoId
     && player?.getCurrentTime,
   );
@@ -305,11 +291,7 @@ function initializePlayer(section, videoId) {
         if (event.data === window.YT.PlayerState.PLAYING) {
           section.classList.add("is-playing");
           songCard(section)?.classList.add("is-playing");
-          const options = optionsElement(section);
-          if (options instanceof HTMLDetailsElement && options.open) {
-            options.dataset.autocollapsed = "1";
-            setOptionsOpen(section, false);
-          }
+          window.setSongView?.("player");
           updateChordControls(section);
           setStatus(section, markMode ? "Marcas activadas." : "");
           if (playbackTimer !== null) window.clearInterval(playbackTimer);
@@ -323,11 +305,6 @@ function initializePlayer(section, videoId) {
         } else {
           section.classList.remove("is-playing");
           songCard(section)?.classList.remove("is-playing");
-          const options = optionsElement(section);
-          if (options instanceof HTMLDetailsElement && options.dataset.autocollapsed === "1") {
-            options.dataset.autocollapsed = "0";
-            setOptionsOpen(section, true);
-          }
           updatePlaybackButton(section);
           updateProgress(section);
           updateChordControls(section);
@@ -512,18 +489,6 @@ document.addEventListener("htmx:afterSwap", (event) => {
   initializeSection(event.detail.target.querySelector("[data-youtube-song]"));
 });
 
-document.addEventListener("toggle", (event) => {
-  const options = event.target;
-  if (!(options instanceof HTMLDetailsElement) || !options.matches("[data-song-options]")) return;
-  if (optionsProgrammaticChange) {
-    optionsProgrammaticChange = false;
-    return;
-  }
-  options.dataset.autocollapsed = "0";
-  if (!options.open) setMarkMode(activeSection, false);
-  else updateChordControls(activeSection);
-}, true);
-
 document.addEventListener("submit", async (event) => {
   const form = event.target.closest(".youtube-link-form");
   if (!form) return;
@@ -563,6 +528,7 @@ document.addEventListener("click", (event) => {
   if (toggle) {
     const section = toggle.closest("[data-youtube-song]");
     if (!section || toggle.disabled) return;
+    if (songView(section) !== "player") window.setSongView?.("player");
     setMarkMode(section, !markMode);
     setStatus(section, markMode ? "Marcas activadas." : "");
     return;
@@ -675,8 +641,7 @@ document.addEventListener("click", (event) => {
   if (!(target instanceof Element)) return;
   const chord = target.closest("[data-chord-index]");
   if (!chord || !markMode) return;
-  const options = optionsElement(activeSection);
-  if (options instanceof HTMLDetailsElement && !options.open) return;
+  if (songView(activeSection) !== "player") return;
   if (!player?.getCurrentTime) return;
   event.preventDefault();
   event.stopImmediatePropagation();
@@ -706,8 +671,7 @@ document.addEventListener("contextmenu", (event) => {
   if (!(target instanceof Element)) return;
   const chord = target.closest("[data-chord-index]");
   if (!chord || !markMode) return;
-  const options = optionsElement(activeSection);
-  if (options instanceof HTMLDetailsElement && !options.open) return;
+  if (songView(activeSection) !== "player") return;
   if (chordTime(chord) === null) return;
   event.preventDefault();
   const id = songId(activeSection);
