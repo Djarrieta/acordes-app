@@ -511,14 +511,6 @@ h1 {
   padding: 0.6rem 1.5rem 0;
 }
 
-.player-toolbar {
-  display: flex;
-  gap: 0.5rem;
-  padding: 0.45rem 0.8rem;
-  background: #fffefa;
-  border-top: 1px solid #ece8de;
-}
-
 .editor-view-header {
   padding: 0.9rem 1.5rem 0.6rem;
 }
@@ -527,6 +519,10 @@ h1 {
   margin: 0;
   font-size: 1.1rem;
   letter-spacing: -0.02em;
+}
+
+.song-view-editor {
+  overflow-x: hidden;
 }
 
 .song-view-editor #song-editor-body {
@@ -740,6 +736,14 @@ h1 {
 
 .youtube-progress-slider:disabled {
   cursor: default;
+}
+
+.youtube-controls-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 0.6rem;
 }
 
 .youtube-play-button {
@@ -1651,9 +1655,23 @@ body.is-song-view .song-lyrics {
   margin-top: 1rem;
 }
 
+.editor-meta label {
+  min-width: 0;
+}
+
+.editor-meta input {
+  width: 100%;
+  min-width: 0;
+}
+
+.editor-meta button {
+  grid-column: 1 / -1;
+}
+
 .editor-meta label,
 .editor-line-form label {
   display: grid;
+  min-width: 0;
   gap: 0.35rem;
   font-size: 0.82rem;
   font-weight: 700;
@@ -1674,6 +1692,8 @@ body.is-song-view .song-lyrics {
 }
 
 .editor-line {
+  min-width: 0;
+  overflow: hidden;
   border: 1px solid #ece8de;
   border-radius: 0.85rem;
   background: #fcfaf5;
@@ -1687,13 +1707,14 @@ body.is-song-view .song-lyrics {
 
 .editor-line-form {
   display: flex;
+  flex-wrap: wrap;
   align-items: flex-end;
   gap: 0.5rem;
 }
 
 .editor-line-text {
   min-width: 0;
-  flex: 1;
+  flex: 1 1 100%;
   border: 1px solid #d6d1c6;
   border-radius: 0.55rem;
   background: white;
@@ -1701,8 +1722,13 @@ body.is-song-view .song-lyrics {
   font-weight: 400;
 }
 
+.editor-line-text textarea {
+  width: 100%;
+  min-width: 0;
+}
+
 .editor-line-position {
-  width: 4.5rem;
+  flex: 0 0 auto;
   border: 1px solid #d6d1c6;
   border-radius: 0.55rem;
   background: white;
@@ -1710,6 +1736,7 @@ body.is-song-view .song-lyrics {
 }
 
 .editor-line-form button {
+  flex: 0 0 auto;
   padding: 0.55rem 0.7rem;
   font-size: 0.8rem;
 }

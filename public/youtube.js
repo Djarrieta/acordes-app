@@ -55,10 +55,10 @@ function updatePlaybackButton(section) {
   const ready = Boolean(player?.getPlayerState && window.YT?.PlayerState);
   const playing = ready && player.getPlayerState() === window.YT.PlayerState.PLAYING;
   button.disabled = !ready;
-  button.setAttribute("aria-label", playing ? "Pausar audio" : "Reproducir audio");
+  button.setAttribute("aria-label", playing ? "Pausar audio" : "Reproducir");
   button.innerHTML = playing
     ? 'Ⅱ <span>Pausar audio</span>'
-    : '▶ <span>Reproducir audio</span>';
+    : '▶ <span>Reproducir</span>';
 }
 
 function getProgressParts(section) {
