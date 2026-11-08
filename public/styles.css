@@ -1685,27 +1685,13 @@ body.is-song-view .song-lyrics {
 }
 
 .editor-line-form {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: flex-end;
-  gap: 0.5rem;
-}
-
-.editor-line-text {
   display: block;
-  min-width: 0;
-  flex: 1 1 100%;
-  font-weight: 700;
-  font-size: 0.85rem;
-  color: #3e3a34;
 }
 
-.editor-line-text textarea {
+.editor-line-textarea {
   width: 100%;
   min-width: 0;
-  margin-top: 0.35rem;
-  border: 1px solid #b8b1a1;
-  border-radius: 0.55rem;
+  border: none;
   background: white;
   padding: 0.55rem 0.65rem;
   font: inherit;
@@ -1713,14 +1699,9 @@ body.is-song-view .song-lyrics {
   resize: vertical;
 }
 
-.editor-line-text textarea:focus {
-  outline: 2px solid #7d7466;
-  outline-offset: 1px;
-}
-
 .editor-line-actions {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
   gap: 0.5rem;
   margin-top: 0.5rem;
 }

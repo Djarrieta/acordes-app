@@ -7,7 +7,11 @@ function hiddenVersion(song: Song): string {
 
 function lineActions(song: Song, line: SongLine): string {
   const base = `/songs/${escapeHtml(song.id)}/lines`;
+  const saveButton = line.isBreak
+    ? ""
+    : `<button type="submit" class="secondary" form="edit-${escapeHtml(line.id)}">Guardar línea</button>`;
   return `<div class="editor-line-actions">
+    ${saveButton}
     <form hx-post="${base}" hx-target="#song-editor-body" hx-swap="innerHTML">
       ${hiddenVersion(song)}
       <input type="hidden" name="after" value="${escapeHtml(line.id)}">
@@ -21,7 +25,7 @@ function lineActions(song: Song, line: SongLine): string {
     </form>
     <form hx-post="${base}/${escapeHtml(line.id)}/delete" hx-target="#song-editor-body" hx-swap="innerHTML">
       ${hiddenVersion(song)}
-      <button type="submit" class="secondary danger">Eliminar línea</button>
+      <button type="submit" class="secondary">Eliminar línea</button>
     </form>
   </div>`;
 }
@@ -31,12 +35,9 @@ export function renderEditor(song: Song): string {
     .map((line) => {
       const body = line.isBreak
         ? `<p class="editor-break">Salto de línea</p>`
-        : `<form class="editor-line-form" hx-post="/songs/${escapeHtml(song.id)}/lines/${escapeHtml(line.id)}" hx-target="#song-editor-body" hx-swap="innerHTML">
+        : `<form id="edit-${escapeHtml(line.id)}" class="editor-line-form" hx-post="/songs/${escapeHtml(song.id)}/lines/${escapeHtml(line.id)}" hx-target="#song-editor-body" hx-swap="innerHTML">
           ${hiddenVersion(song)}
-          <label class="editor-line-text"><span class="sr-only">Letra y acordes de la línea ${line.position + 1}</span>
-            <textarea name="text" rows="2" maxlength="2000" spellcheck="false" required>${escapeHtml(line.text)}</textarea>
-          </label>
-          <button type="submit" class="secondary">Guardar línea</button>
+          <textarea class="editor-line-textarea" name="text" rows="2" maxlength="2000" spellcheck="false" required aria-label="Letra y acordes de la línea ${line.position + 1}">${escapeHtml(line.text)}</textarea>
         </form>`;
       return `<section class="editor-line" data-line-id="${escapeHtml(line.id)}">
         ${body}
