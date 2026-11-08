@@ -17,6 +17,7 @@ export function homePage(): Response {
     const SONG_ID = /^\\/([a-z0-9_-]+)\\/([a-z0-9_.-]+)\\.shtml$/i;
     let songPreferences = new Map();
     let onlyFavorites = false;
+    let optionsOpenBeforeSwap = null;
     htmx.config.responseHandling = [
       { code: "204", swap: false },
       { code: "[23]..", swap: true },
@@ -38,8 +39,11 @@ export function homePage(): Response {
       }
       const options = target.querySelector("[data-song-options]");
       if (options instanceof HTMLDetailsElement) {
-        options.open = !window.matchMedia("(max-width: 899px)").matches;
+        const openByDefault = !window.matchMedia("(max-width: 899px)").matches;
+        const isNewSong = requestPath === "/load";
+        options.open = isNewSong || optionsOpenBeforeSwap === null ? openByDefault : optionsOpenBeforeSwap;
       }
+      optionsOpenBeforeSwap = null;
       updateWizard(2);
       document.getElementById("search-panel").hidden = true;
       target.hidden = false;
@@ -47,6 +51,11 @@ export function homePage(): Response {
       if (event.detail.requestConfig?.path !== "/load") return;
       const title = target.querySelector("#selected-song-title");
       if (title instanceof HTMLElement) title.focus({ preventScroll: true });
+    });
+    document.addEventListener("htmx:beforeSwap", (event) => {
+      if (event.detail.target?.id !== "song-container") return;
+      const current = document.querySelector("[data-song-options]");
+      optionsOpenBeforeSwap = current instanceof HTMLDetailsElement ? current.open : null;
     });
     document.addEventListener("htmx:beforeRequest", (event) => {
       if (event.detail?.target?.id === "song-container") {
