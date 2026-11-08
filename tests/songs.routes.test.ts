@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import type { Database } from "bun:sqlite";
 import { openDatabase, setDb } from "../src/db";
 import { resetRateLimits } from "../src/core/ratelimit";
-import { createSong, getSong, setChordTimestamp } from "../src/songs/songs.db";
+import { createSong, getSong, setChordTimestamp, setVideoStatus } from "../src/songs/songs.db";
 import { handleSongsRoutes } from "../src/songs/songs.routes";
 import type { Song } from "../src/songs/songs.model";
 
@@ -68,6 +68,19 @@ describe("song routes", () => {
 
     await route(request(`/songs/${song.id}/transpose`, "POST", { offset: "2", reset: "1" }));
     expect(getSong(db, song.id)!.preferredOffset).toBe(0);
+  });
+
+  test("shows the loading overlay while the song is busy preparing", async () => {
+    setVideoStatus(db, song.id, "searching");
+    const busy = await route(request(`/songs/${song.id}/player?offset=0`));
+    const busyHtml = await busy.text();
+    expect(busyHtml).toContain("song-loading-overlay");
+    expect(busyHtml).toContain("Preparando la canción");
+
+    setVideoStatus(db, song.id, "failed", "sin video");
+    const ready = await route(request(`/songs/${song.id}/player?offset=0`));
+    const readyHtml = await ready.text();
+    expect(readyHtml).not.toContain("song-loading-overlay");
   });
 
   test("returns the status payload for polling", async () => {

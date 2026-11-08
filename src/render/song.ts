@@ -222,8 +222,12 @@ export function renderSong(song: Song, offset: number): string {
   const videoId = song.video ? escapeHtml(song.video.id) : "";
   const videoUrl = song.video ? escapeHtml(song.video.url) : "";
   const hasVideo = song.video ? "true" : "false";
+  const loadingOverlay = isBusySong(song)
+    ? `<div class="song-loading-overlay" role="status" aria-live="polite"><div class="song-loader"><span class="song-loader-spinner" aria-hidden="true"></span><span>Preparando la canción…</span></div></div>`
+    : "";
 
   return `<section class="song-card" aria-label="Canción transpuesta" data-song-id="${id}" data-source-key="${sourceKey}" data-offset="${offsetValue}" data-video-id="${videoId}" data-video-url="${videoUrl}" data-video-status="${song.videoStatus}" data-timestamps-status="${song.timestampsStatus}" data-has-video="${hasVideo}">
+  ${loadingOverlay}
   <header class="song-header">
     <div class="song-title-block"><p class="eyebrow">${escapeHtml(song.artist)}</p><h2 id="selected-song-title" tabindex="-1">${escapeHtml(song.title)}</h2></div>
     <div class="song-header-actions">

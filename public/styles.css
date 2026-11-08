@@ -439,11 +439,25 @@ h1 {
 }
 
 .song-card {
+  position: relative;
   overflow: hidden;
   border: 1px solid #e4dfd4;
   border-radius: 1rem;
   background: #fffefa;
   box-shadow: 0 12px 35px rgb(65 53 33 / 6%);
+}
+
+.song-loading-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 20;
+  display: grid;
+  place-items: center;
+  background: #fffefa;
+}
+
+.song-loading-overlay .song-loader {
+  min-height: 100%;
 }
 
 .song-header {
