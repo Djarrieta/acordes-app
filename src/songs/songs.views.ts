@@ -6,19 +6,20 @@ function hiddenVersion(song: Song): string {
 }
 
 function lineActions(song: Song, line: SongLine): string {
+  const base = `/songs/${escapeHtml(song.id)}/lines`;
   return `<div class="editor-line-actions">
-    <form hx-post="/songs/${escapeHtml(song.id)}/lines" hx-target="#song-editor-body" hx-swap="innerHTML">
+    <form hx-post="${base}" hx-target="#song-editor-body" hx-swap="innerHTML">
       ${hiddenVersion(song)}
       <input type="hidden" name="after" value="${escapeHtml(line.id)}">
       <button type="submit" class="secondary">Añadir línea después</button>
     </form>
-    <form hx-post="/songs/${escapeHtml(song.id)}/lines" hx-target="#song-editor-body" hx-swap="innerHTML">
+    <form hx-post="${base}" hx-target="#song-editor-body" hx-swap="innerHTML">
       ${hiddenVersion(song)}
       <input type="hidden" name="after" value="${escapeHtml(line.id)}">
       <input type="hidden" name="break" value="1">
       <button type="submit" class="secondary">Añadir salto de línea</button>
     </form>
-    <form hx-post="/songs/${escapeHtml(song.id)}/lines/${escapeHtml(line.id)}/delete" hx-target="#song-editor-body" hx-swap="innerHTML">
+    <form hx-post="${base}/${escapeHtml(line.id)}/delete" hx-target="#song-editor-body" hx-swap="innerHTML">
       ${hiddenVersion(song)}
       <button type="submit" class="secondary danger">Eliminar línea</button>
     </form>
@@ -32,10 +33,9 @@ export function renderEditor(song: Song): string {
         ? `<p class="editor-break">Salto de línea</p>`
         : `<form class="editor-line-form" hx-post="/songs/${escapeHtml(song.id)}/lines/${escapeHtml(line.id)}" hx-target="#song-editor-body" hx-swap="innerHTML">
           ${hiddenVersion(song)}
-          <label class="editor-line-text">Letra y acordes
+          <label class="editor-line-text"><span class="sr-only">Letra y acordes de la línea ${line.position + 1}</span>
             <textarea name="text" rows="2" maxlength="2000" spellcheck="false" required>${escapeHtml(line.text)}</textarea>
           </label>
-          <p class="editor-hint">Escribe los acordes entre corchetes pegados a su palabra, p. ej. <code>[Am]Debajo de la [G]morera</code>. Las marcas de tiempo van dentro del acorde: <code>[Am@12.3]</code> (segundos). No escribas columnas.</p>
           <button type="submit" class="secondary">Guardar línea</button>
         </form>`;
       return `<section class="editor-line" data-line-id="${escapeHtml(line.id)}">
@@ -46,6 +46,8 @@ export function renderEditor(song: Song): string {
     .join("");
 
   return `<div class="song-editor-inner" data-song-version="${song.version}">
+    <h3 class="editor-lines-title">Letra y acordes</h3>
+    <p class="editor-hint">Escribe los acordes entre corchetes pegados a su palabra, p. ej. <code>[Am]Debajo de la [G]morera</code>. Las marcas de tiempo van dentro del acorde: <code>[Am@12.3]</code> (segundos). No escribas columnas.</p>
     <p class="editor-hint">Versión ${song.version}. Los cambios se guardan en la canción compartida y quedan auditados.</p>
     <form class="editor-meta" hx-post="/songs/${escapeHtml(song.id)}/meta" hx-target="#song-editor-body" hx-swap="innerHTML">
       ${hiddenVersion(song)}
