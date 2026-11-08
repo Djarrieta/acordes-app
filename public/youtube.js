@@ -1,6 +1,7 @@
 const VIDEO_ID_PATTERN = /^[a-zA-Z0-9_-]{11}$/;
 
 let activeSection = null;
+let optionsProgrammaticChange = false;
 let player = null;
 let playerVideoId = null;
 let apiLoading = false;
@@ -64,6 +65,18 @@ function songCard(section) {
 
 function songId(section) {
   return songCard(section)?.dataset.songId ?? "";
+}
+
+function optionsElement(section) {
+  return songCard(section)?.querySelector("[data-song-options]") ?? null;
+}
+
+function setOptionsOpen(section, open) {
+  const options = optionsElement(section);
+  if (!(options instanceof HTMLDetailsElement)) return;
+  if (options.open === open) return;
+  optionsProgrammaticChange = true;
+  options.open = open;
 }
 
 function setStatus(section, message) {
@@ -140,9 +153,11 @@ function seekToTimestamp(seconds) {
 }
 
 function updateChordControls(section) {
+  const options = optionsElement(section);
+  const optionsOpen = options instanceof HTMLDetailsElement ? options.open : true;
   const ready = Boolean(section?.dataset.videoId && player && player.getPlayerState);
   const toggle = section?.querySelector("[data-chord-mark-toggle]");
-  if (toggle) toggle.disabled = !ready;
+  if (toggle) toggle.disabled = !ready || !optionsOpen;
   const card = songCard(section);
   const timestampsAuto = card?.querySelector("[data-timestamps-auto]");
   const timestampsRetry = card?.querySelector("[data-timestamps-retry]");
@@ -176,9 +191,12 @@ function updateChordControls(section) {
 }
 
 function setMarkMode(section, enabled) {
+  const options = optionsElement(section);
+  const optionsOpen = options instanceof HTMLDetailsElement ? options.open : true;
   markMode = Boolean(
     enabled
     && section
+    && optionsOpen
     && section.dataset.videoId
     && player?.getCurrentTime,
   );
@@ -285,6 +303,7 @@ function destroyPlayer(section) {
   playerVideoId = null;
   highlightedChordIndex = null;
   section?.classList.remove("is-playing");
+  songCard(section)?.classList.remove("is-playing");
 }
 
 function initializePlayer(section, videoId) {
@@ -328,6 +347,13 @@ function initializePlayer(section, videoId) {
         if (activeSection !== section || section.dataset.videoId !== videoId) return;
         if (event.data === window.YT.PlayerState.PLAYING) {
           section.classList.add("is-playing");
+          songCard(section)?.classList.add("is-playing");
+          const options = optionsElement(section);
+          if (options instanceof HTMLDetailsElement && options.open) {
+            options.dataset.autocollapsed = "1";
+            setOptionsOpen(section, false);
+          }
+          updateChordControls(section);
           setStatus(section, markMode ? "Marcas activadas." : "");
           if (playbackTimer !== null) window.clearInterval(playbackTimer);
           updateCurrentChord(section);
@@ -339,8 +365,15 @@ function initializePlayer(section, videoId) {
           updateProgress(section);
         } else {
           section.classList.remove("is-playing");
+          songCard(section)?.classList.remove("is-playing");
+          const options = optionsElement(section);
+          if (options instanceof HTMLDetailsElement && options.dataset.autocollapsed === "1") {
+            options.dataset.autocollapsed = "0";
+            setOptionsOpen(section, true);
+          }
           updatePlaybackButton(section);
           updateProgress(section);
+          updateChordControls(section);
           if (playbackTimer !== null) {
             window.clearInterval(playbackTimer);
             playbackTimer = null;
@@ -351,6 +384,7 @@ function initializePlayer(section, videoId) {
         if (activeSection !== section || section.dataset.videoId !== videoId) return;
         console.error("Error del reproductor de YouTube:", event.data);
         section.classList.remove("is-playing");
+        songCard(section)?.classList.remove("is-playing");
         setStatus(section, "No se pudo reproducir.");
         if (playbackTimer !== null) {
           window.clearInterval(playbackTimer);
@@ -522,6 +556,18 @@ document.addEventListener("htmx:afterSwap", (event) => {
   initializeSection(event.detail.target.querySelector("[data-youtube-song]"));
 });
 
+document.addEventListener("toggle", (event) => {
+  const options = event.target;
+  if (!(options instanceof HTMLDetailsElement) || !options.matches("[data-song-options]")) return;
+  if (optionsProgrammaticChange) {
+    optionsProgrammaticChange = false;
+    return;
+  }
+  options.dataset.autocollapsed = "0";
+  if (!options.open) setMarkMode(activeSection, false);
+  else updateChordControls(activeSection);
+}, true);
+
 document.addEventListener("submit", async (event) => {
   const form = event.target.closest(".youtube-link-form");
   if (!form) return;
@@ -672,7 +718,10 @@ document.addEventListener("click", (event) => {
   const target = event.target;
   if (!(target instanceof Element)) return;
   const chord = target.closest("[data-chord-index]");
-  if (!chord || !markMode || !activeSection || !player?.getCurrentTime) return;
+  if (!chord || !markMode) return;
+  const options = optionsElement(activeSection);
+  if (options instanceof HTMLDetailsElement && !options.open) return;
+  if (!player?.getCurrentTime) return;
   event.preventDefault();
   event.stopImmediatePropagation();
   const ms = Math.floor(player.getCurrentTime() * 1000);
@@ -700,7 +749,9 @@ document.addEventListener("contextmenu", (event) => {
   const target = event.target;
   if (!(target instanceof Element)) return;
   const chord = target.closest("[data-chord-index]");
-  if (!chord || !markMode || !activeSection) return;
+  if (!chord || !markMode) return;
+  const options = optionsElement(activeSection);
+  if (options instanceof HTMLDetailsElement && !options.open) return;
   if (chordTime(chord) === null) return;
   event.preventDefault();
   const id = songId(activeSection);

@@ -1315,12 +1315,20 @@ body.is-song-view .youtube-summary strong {
   font-size: 0.85rem;
 }
 
-body.is-song-view .youtube-section[open] .youtube-panel {
+body.is-song-view .youtube-section .youtube-panel {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
   gap: 0.35rem 0.65rem;
   padding: 0.45rem 0.8rem;
+}
+
+body.is-song-view .song-card.is-playing .song-options {
+  border-top: 1px solid #ece8de;
+}
+
+body.is-song-view .song-lyrics {
+  scroll-behavior: smooth;
 }
 
 body.is-song-view .youtube-header {

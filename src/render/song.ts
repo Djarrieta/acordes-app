@@ -250,11 +250,12 @@ export function renderSong(song: Song, offset: number): string {
         </div>
         <button type="button" class="youtube-play-button" data-youtube-play disabled aria-label="Reproducir audio">▶ <span>Reproducir audio</span></button>
       </div>
-      <section class="song-options" data-song-options>
+      <details class="song-options" data-song-options open>
+        <summary class="song-options-summary">
+          <span>Opciones</span>
+          <span class="song-options-hint">Transposición y acompañamiento</span>
+        </summary>
         <div class="song-options-panel">
-          <div class="song-options-header">
-            <span>Opciones</span>
-          </div>
           <div class="song-controls" aria-label="Transponer canción">
             ${controls}
             <button type="button" class="secondary" hx-post="/songs/${id}/transpose" hx-vals='{"offset":${offsetValue},"reset":1}' hx-target="#song-container" hx-swap="innerHTML">Original</button>
@@ -262,7 +263,7 @@ export function renderSong(song: Song, offset: number): string {
           </div>
           ${renderVideoPanel(song, searchQuery)}
         </div>
-      </section>
+      </details>
     </aside>
     <div class="song song-lyrics" aria-label="Letra y acordes">${lyrics}</div>
   </div>
