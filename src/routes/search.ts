@@ -23,9 +23,9 @@ function html(body: string, status = 200): Response {
 function errorResponse(error: unknown): Response {
   const known = error instanceof LacuerdaParseError || error instanceof LacuerdaFetchError;
   const message = known
-    ? "No fue posible mostrar los resultados. Inténtalo de nuevo más tarde."
-    : "No se pudo completar la búsqueda. Inténtalo de nuevo más tarde.";
-  const status = error instanceof LacuerdaParseError ? 400 : 502;
+    ? "No fue posible mostrar los resultados por ahora. Inténtalo de nuevo en unos momentos."
+    : "No se pudo completar la búsqueda por ahora. Inténtalo de nuevo en unos momentos.";
+  const status = error instanceof LacuerdaParseError ? 400 : 200;
   return html(renderError(message), status);
 }
 
