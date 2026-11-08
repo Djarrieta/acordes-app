@@ -43,6 +43,7 @@ CREATE TABLE IF NOT EXISTS song_lines (
   position    INTEGER NOT NULL,
   text        TEXT NOT NULL DEFAULT '',
   is_manual   INTEGER NOT NULL DEFAULT 0,
+  is_break    INTEGER NOT NULL DEFAULT 0,
   created_at  TEXT NOT NULL,
   updated_at  TEXT NOT NULL,
   UNIQUE (song_id, position)

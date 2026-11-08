@@ -46,6 +46,7 @@ describe("renderGuitarChordDiagram", () => {
             text: "[C]Letra",
             lyric: "Letra",
             isManual: false,
+            isBreak: false,
             chords: [
               {
                 id: "chord-1",
@@ -93,6 +94,7 @@ describe("renderGuitarChordDiagram", () => {
             text: "[C]Primera [G]línea",
             lyric: "Primera línea",
             isManual: false,
+            isBreak: false,
             chords: [chord("chord-1", "C", 0), chord("chord-2", "G", 8)],
           },
           {
@@ -101,6 +103,7 @@ describe("renderGuitarChordDiagram", () => {
             text: "[C]Segunda línea",
             lyric: "Segunda línea",
             isManual: false,
+            isBreak: false,
             chords: [chord("chord-3", "C", 0)],
           },
         ],

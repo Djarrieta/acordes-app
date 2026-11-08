@@ -19,7 +19,6 @@ import {
   refreshNonManualLines,
   setPreferredOffset,
   setChordTimestamp,
-  setLinePosition,
   setVideo,
   updateLine,
   updateSongMeta,
@@ -301,9 +300,15 @@ export async function handleSongsRoutes(
     if (song.lines.length >= MAX_LINES) {
       return badRequest(`La canción no puede tener más de ${MAX_LINES} líneas.`);
     }
-    addLine(db, song.id);
+    const after = form.get("after");
+    const afterLineId = typeof after === "string" && after ? after : null;
+    if (afterLineId && !song.lines.some((line) => line.id === afterLineId)) {
+      return missingSong();
+    }
+    const isBreak = form.get("break") !== null;
+    addLine(db, song.id, afterLineId, isBreak);
     bumpVersion(db, song.id);
-    recordEdit(db, song.id, "line.add", {});
+    recordEdit(db, song.id, isBreak ? "line.break" : "line.add", { afterLineId });
     const updated = editorSong(db, song.id);
     return updated ? editorResponse(updated) : missingSong();
   }
@@ -329,21 +334,14 @@ export async function handleSongsRoutes(
       return updated ? editorResponse(updated) : missingSong();
     }
 
+    if (line.isBreak) return badRequest("Un salto de línea no admite texto.");
     const text = validateChordProText(form.get("text"));
     if (text === null) {
       return badRequest(
-        "El texto de la línea no es válido: revisa los acordes [Am], las marcas [Am@12.3] y los corchetes.",
+        "El texto de la línea no es válido: escribe siempre texto (acordes entre corchetes, p. ej. [Am]), revisa las marcas [Am@12.3] y los corchetes.",
       );
     }
     updateLine(db, song.id, lineId, text);
-    const positionValue = form.get("position");
-    if (positionValue !== null) {
-      const position = Number(positionValue);
-      if (!Number.isSafeInteger(position) || position < 0 || position >= song.lines.length) {
-        return badRequest("La posición de la línea no es válida.");
-      }
-      if (position !== line.position) setLinePosition(db, song.id, lineId, position);
-    }
     bumpVersion(db, song.id);
     recordEdit(db, song.id, "line.update", { lineId, text });
     const updated = editorSong(db, song.id);

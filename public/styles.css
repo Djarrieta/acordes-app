@@ -1692,80 +1692,59 @@ body.is-song-view .song-lyrics {
 }
 
 .editor-line-text {
+  display: block;
   min-width: 0;
   flex: 1 1 100%;
-  border: 1px solid #d6d1c6;
-  border-radius: 0.55rem;
-  background: white;
-  padding: 0.55rem 0.65rem;
-  font-weight: 400;
+  font-weight: 700;
+  font-size: 0.85rem;
+  color: #3e3a34;
 }
 
 .editor-line-text textarea {
   width: 100%;
   min-width: 0;
-}
-
-.editor-line-position {
-  flex: 0 0 auto;
-  border: 1px solid #d6d1c6;
+  margin-top: 0.35rem;
+  border: 1px solid #b8b1a1;
   border-radius: 0.55rem;
   background: white;
-  padding: 0.55rem 0.5rem;
+  padding: 0.55rem 0.65rem;
+  font: inherit;
+  font-weight: 400;
+  resize: vertical;
 }
+
+.editor-line-text textarea:focus {
+  outline: 2px solid #7d7466;
+  outline-offset: 1px;
+}
+
+.editor-line-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+}
+
+.editor-line-actions button {
+  padding: 0.55rem 0.7rem;
+  font-size: 0.8rem;
+}
+
+.editor-break {
+  margin: 0;
+  padding: 0.55rem 0.7rem;
+  border: 1px dashed #cfc8ba;
+  border-radius: 0.55rem;
+  color: #8a8272;
+  font-style: italic;
+}
+
+
 
 .editor-line-form button {
   flex: 0 0 auto;
   padding: 0.55rem 0.7rem;
   font-size: 0.8rem;
-}
-
-.editor-chords {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: flex-end;
-  gap: 0.5rem;
-  margin-top: 0.65rem;
-}
-
-.editor-chord {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: flex-end;
-  gap: 0.5rem;
-  min-width: 0;
-  max-width: 100%;
-  border: 1px solid #e4dfd4;
-  border-radius: 0.65rem;
-  background: white;
-  padding: 0.45rem;
-}
-
-.editor-chord-form {
-  display: grid;
-  flex: 1 1 12rem;
-  grid-template-columns: 1fr 5rem auto;
-  align-items: end;
-  gap: 0.35rem;
-  min-width: 0;
-}
-
-.editor-chord-form input {
-  width: 5.5rem;
-  border: 1px solid #d6d1c6;
-  border-radius: 0.45rem;
-  padding: 0.4rem 0.45rem;
-  font-size: 0.82rem;
-}
-
-.editor-chord-form input.editor-chord-column {
-  width: 4rem;
-}
-
-.editor-chord button,
-.editor-add-chord {
-  padding: 0.4rem 0.55rem;
-  font-size: 0.78rem;
 }
 
 button.secondary {

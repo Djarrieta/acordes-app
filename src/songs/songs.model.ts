@@ -27,6 +27,7 @@ export type SongLine = {
   text: string;
   lyric: string;
   isManual: boolean;
+  isBreak: boolean;
   chords: SongChord[];
 };
 

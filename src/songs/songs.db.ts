@@ -49,6 +49,7 @@ type LineRow = {
   position: number;
   text: string;
   is_manual: number;
+  is_break: number;
 };
 
 type CandidateRow = {
@@ -94,6 +95,7 @@ function mapLine(row: LineRow): SongLine {
     text: row.text,
     lyric: parsed.lyric,
     isManual: row.is_manual === 1,
+    isBreak: row.is_break === 1,
     chords,
   };
 }
@@ -288,16 +290,37 @@ function renumberLines(db: Database, songId: string): void {
   }
 }
 
-export function addLine(db: Database, songId: string): string {
-  const row = db
-    .query("SELECT COALESCE(MAX(position), -1) AS position FROM song_lines WHERE song_id = ?")
-    .get(songId) as { position: number };
+export function addLine(
+  db: Database,
+  songId: string,
+  afterLineId: string | null = null,
+  isBreak = false,
+): string {
+  const lines = db
+    .query("SELECT id FROM song_lines WHERE song_id = ? ORDER BY position ASC")
+    .all(songId) as { id: string }[];
+  const ids = lines.map((line) => line.id);
+  const at = afterLineId ? ids.indexOf(afterLineId) : -1;
+  const insertAt = at === -1 ? ids.length : at + 1;
   const id = newId();
   const timestamp = now();
-  db.query(
-    `INSERT INTO song_lines (id, song_id, position, text, is_manual, created_at, updated_at)
-     VALUES (?, ?, ?, '', 1, ?, ?)`,
-  ).run(id, songId, row.position + 1, timestamp, timestamp);
+  transaction(db, () => {
+    for (const [index, lineId] of ids.entries()) {
+      db.query("UPDATE song_lines SET position = ? WHERE id = ?").run(-(index + 1), lineId);
+    }
+    db.query(
+      `INSERT INTO song_lines (id, song_id, position, text, is_manual, is_break, created_at, updated_at)
+       VALUES (?, ?, ?, '', 1, ?, ?, ?)`,
+    ).run(id, songId, insertAt, isBreak ? 1 : 0, timestamp, timestamp);
+    ids.splice(insertAt, 0, id);
+    for (const [index, lineId] of ids.entries()) {
+      db.query("UPDATE song_lines SET position = ?, updated_at = ? WHERE id = ?").run(
+        index,
+        now(),
+        lineId,
+      );
+    }
+  });
   return id;
 }
 

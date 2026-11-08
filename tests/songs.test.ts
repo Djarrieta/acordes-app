@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import type { Database } from "bun:sqlite";
 import { openDatabase, setDb } from "../src/db";
 import {
+  addLine,
   applyAutoTimestamps,
   clearAllTimestamps,
   createSong,
@@ -105,6 +106,24 @@ describe("song repository", () => {
     const updated = getSong(db, song.id)!;
     expect(updated.lines).toHaveLength(1);
     expect(updated.lines[0]!.position).toBe(0);
+  });
+
+  test("inserts lines between existing ones and creates empty breaks", () => {
+    const song = seed();
+    const middleId = addLine(db, song.id, song.lines[0]!.id);
+    const breakId = addLine(db, song.id, song.lines[0]!.id, true);
+
+    const updated = getSong(db, song.id)!;
+    expect(updated.lines.map((line) => line.id)).toEqual([
+      song.lines[0]!.id,
+      breakId,
+      middleId,
+      song.lines[1]!.id,
+    ]);
+    expect(updated.lines.map((line) => line.position)).toEqual([0, 1, 2, 3]);
+    expect(updated.lines[1]!.isBreak).toBe(true);
+    expect(updated.lines[1]!.text).toBe("");
+    expect(updated.lines[2]!.isBreak).toBe(false);
   });
 
   test("refresh keeps manual lines and replaces the rest", () => {

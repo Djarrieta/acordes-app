@@ -986,7 +986,11 @@ guarda su letra *con* acordes y timestamps inline, p. ej. en
 1. **Un textarea por línea** (o uno por canción) con el texto ChordPro.
    Editar `[G]` por `[C]`, moverlo de sitio o añadir `[Em]nuevo` delante de
    una palabra son operaciones de texto normales; vista previa del
-   reproductor al guardar, sin numeritos.
+   reproductor al guardar, sin numeritos. La posición de la línea nunca la
+   escribe el usuario: se infiere al insertar (después de la línea actual)
+   y se guarda en `position`. Guardar exige texto no vacío; los saltos de
+   línea (espaciadores vacíos, `is_break = 1`) se crean con botón propio
+   y no admiten texto.
 2. **Guardado por línea, no por acorde**: un POST por línea con
    `version`, validación servidor (nombres de acorde con el patrón actual
    `validateChordName`, `songs.service.ts:82-89`; longitud máxima;

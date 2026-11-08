@@ -84,6 +84,7 @@ export function validateLineText(value: unknown): string | null {
 export function validateChordProText(value: unknown): string | null {
   if (typeof value !== "string") return null;
   if (value.length > MAX_LINE_LENGTH) return null;
+  if (!value.trim()) return null;
   if (!validateChordProLine(value, MAX_CHORDS_PER_LINE)) return null;
   return value;
 }

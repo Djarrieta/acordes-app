@@ -160,6 +160,46 @@ describe("song routes", () => {
     expect(getSong(db, song.id)!.lines[0]!.text).toBe("[D]linea editada");
   });
 
+  test("requires text to save a line", async () => {
+    const lineId = song.lines[0]!.id;
+    const empty = await route(
+      request(`/songs/${song.id}/lines/${lineId}`, "POST", { version: "1", text: "   " }),
+    );
+    expect(empty.status).toBe(400);
+    expect(getSong(db, song.id)!.lines[0]!.text).toBe("[C]primera [G]linea");
+  });
+
+  test("adds lines and breaks between lines from the editor", async () => {
+    const lineId = song.lines[0]!.id;
+    const added = await route(
+      request(`/songs/${song.id}/lines`, "POST", { version: "1", after: lineId }),
+    );
+    expect(added.status).toBe(200);
+    const afterAdd = getSong(db, song.id)!;
+    expect(afterAdd.lines).toHaveLength(3);
+    expect(afterAdd.lines[1]!.text).toBe("");
+    expect(afterAdd.lines[1]!.isBreak).toBe(false);
+
+    const html = await added.text();
+    expect(html).toContain("Añadir línea después");
+    expect(html).toContain("Añadir salto de línea");
+    expect(html).not.toContain('name="position"');
+
+    const brk = await route(
+      request(`/songs/${song.id}/lines`, "POST", {
+        version: String(afterAdd.version),
+        after: lineId,
+        break: "1",
+      }),
+    );
+    expect(brk.status).toBe(200);
+    const withBreak = getSong(db, song.id)!;
+    expect(withBreak.lines[1]!.isBreak).toBe(true);
+    expect(withBreak.lines[1]!.text).toBe("");
+    const breakHtml = await brk.text();
+    expect(breakHtml).toContain("Salto de línea");
+  });
+
   test("validates inline chord text in the editor", async () => {
     const lineId = song.lines[0]!.id;
     const badName = await route(

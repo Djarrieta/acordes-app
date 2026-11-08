@@ -33,6 +33,7 @@ describe("song wizard", () => {
             text: "[C]Letra de prueba",
             lyric: "Letra de prueba",
             isManual: false,
+            isBreak: false,
             chords: [
               {
                 id: "chord-1",
@@ -107,6 +108,7 @@ describe("song wizard", () => {
             text: "[C]Letra",
             lyric: "Letra",
             isManual: false,
+            isBreak: false,
             chords: [
               {
                 id: "chord-1",
