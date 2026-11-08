@@ -395,9 +395,7 @@ function initializeSection(section) {
   const media = card?.querySelector("[data-youtube-media]");
   const playbackControls = card?.querySelector("[data-youtube-playback-controls]");
   const host = card?.querySelector("[data-youtube-player]");
-  const unlinkButton = section.querySelector("[data-video-unlink]");
   if (input) input.value = videoUrl;
-  if (unlinkButton) unlinkButton.hidden = !videoId;
   updateChordControls(section);
   const hasVideo = VIDEO_ID_PATTERN.test(videoId);
   if (media) media.hidden = !hasVideo;
@@ -590,19 +588,27 @@ document.addEventListener("click", (event) => {
     return;
   }
 
-  const unlink = target.closest("[data-video-unlink]");
-  if (unlink) {
-    const section = unlink.closest("[data-youtube-song]");
+  const candidatesToggle = target.closest("[data-video-candidates-toggle]");
+  if (candidatesToggle) {
+    const section = candidatesToggle.closest("[data-youtube-song]");
+    const container = section?.querySelector("[data-video-candidates]");
+    if (!container) return;
+    container.hidden = !container.hidden;
+    if (container.hidden || container.dataset.loaded) return;
+    container.dataset.loaded = "1";
     const id = songId(section);
-    if (!section || !id) return;
-    postForm(`/songs/${encodeURIComponent(id)}/video`, { clear: "1" })
+    const body = container.querySelector(".video-candidates-body");
+    fetch(`/songs/${encodeURIComponent(id)}/videos`, { headers: { Accept: "text/html" } })
       .then((response) => {
-        if (!response.ok) throw new Error("No se pudo quitar el video.");
-        reloadPlayer();
+        if (!response.ok) throw new Error("No se pudieron cargar los candidatos.");
+        return response.text();
+      })
+      .then((html) => {
+        if (body) body.innerHTML = html;
       })
       .catch((error) => {
         console.error(error);
-        setStatus(section, "No se pudo quitar el video.");
+        if (body) body.textContent = "No se pudieron cargar los candidatos.";
       });
     return;
   }

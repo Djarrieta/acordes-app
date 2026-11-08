@@ -117,14 +117,6 @@ function transpositionLabel(offset: number): string {
   return `${offset > 0 ? "+" : "-"}${amount} ${amount === 1 ? "semitono" : "semitonos"}`;
 }
 
-const VIDEO_STATUS_LABELS: Record<Song["videoStatus"], string> = {
-  none: "Sin video",
-  searching: "Cargando…",
-  ready: "Video listo",
-  failed: "Sin video",
-  skipped: "Sin video",
-};
-
 function isBusySong(song: Song): boolean {
   return song.videoStatus === "searching" || ["pending", "transcribing", "aligning"].includes(song.timestampsStatus);
 }
@@ -159,21 +151,16 @@ function renderVideoPanel(song: Song, searchQuery: string): string {
       : "";
 
   const candidates = video
-    ? `<details class="video-candidates" data-video-candidates hx-get="/songs/${escapeHtml(song.id)}/videos" hx-trigger="toggle once" hx-target="find .video-candidates-body" hx-swap="innerHTML">
-        <summary>Ver otros candidatos</summary>
+    ? `<button type="button" class="secondary" data-video-candidates-toggle>Usar otro video</button>
+       <div class="video-candidates" data-video-candidates hidden>
         <div class="video-candidates-body"><p class="editor-hint">Cargando candidatos…</p></div>
-      </details>
-      <button type="button" class="youtube-unlink secondary" data-video-unlink>Quitar video</button>`
+      </div>`
     : "";
 
   return `<section class="youtube-section${video ? " has-video" : ""}" data-youtube-song="${escapeHtml(song.id)}" data-video-id="${video ? escapeHtml(video.id) : ""}" data-video-url="${video ? escapeHtml(video.url) : ""}" data-video-status="${song.videoStatus}" data-timestamps-status="${song.timestampsStatus}">
-        <div class="youtube-section-header">
-          <span><span class="eyebrow">Acompañamiento</span><strong>YouTube</strong></span>
-          <span class="youtube-summary-state" data-youtube-summary-state>${busy ? "Cargando…" : escapeHtml(VIDEO_STATUS_LABELS[song.videoStatus])}</span>
-        </div>
         <div class="youtube-panel" aria-label="Opciones de acompañamiento">
           <div class="option-group">
-            <h3 class="option-heading">Video</h3>
+            <h3 class="option-heading">Youtube</h3>
             <div class="youtube-header">
               <p>Vincula un video para escuchar la canción mientras ves los acordes.</p>
               <a class="youtube-search-link" href="https://www.youtube.com/results?search_query=${searchQuery}" target="_blank" rel="noopener noreferrer">Buscar en YouTube</a>
@@ -192,7 +179,7 @@ function renderVideoPanel(song: Song, searchQuery: string): string {
             ${candidates}
           </div>
           <div class="option-group">
-            <h3 class="option-heading">Marcas</h3>
+            <h3 class="option-heading">Marcas de tiempo</h3>
             <div class="youtube-actions">
               <button type="button" data-timestamps-auto${busyTimestamps || !video ? " disabled" : ""}>Generar marcas</button>
               <button type="button" class="secondary" data-timestamps-retry${!video ? " disabled" : ""}>Reintentar marcas</button>
