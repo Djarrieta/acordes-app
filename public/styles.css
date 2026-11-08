@@ -1722,11 +1722,6 @@ body.is-song-view .song-lyrics {
   }
 }
 
-.editor-lines-title {
-  margin: 0 0 0.25rem;
-  font-size: 1rem;
-}
-
 .sr-only {
   position: absolute;
   width: 1px;

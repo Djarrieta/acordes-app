@@ -47,9 +47,7 @@ export function renderEditor(song: Song): string {
     .join("");
 
   return `<div class="song-editor-inner" data-song-version="${song.version}">
-    <h3 class="editor-lines-title">Letra y acordes</h3>
     <p class="editor-hint">Escribe los acordes entre corchetes pegados a su palabra, p. ej. <code>[Am]Debajo de la [G]morera</code>. Las marcas de tiempo van dentro del acorde: <code>[Am@12.3]</code> (segundos). No escribas columnas.</p>
-    <p class="editor-hint">Versión ${song.version}. Los cambios se guardan en la canción compartida y quedan auditados.</p>
     <form class="editor-meta" hx-post="/songs/${escapeHtml(song.id)}/meta" hx-target="#song-editor-body" hx-swap="innerHTML">
       ${hiddenVersion(song)}
       <label>Título <input name="title" value="${escapeHtml(song.title)}" maxlength="200" required></label>
