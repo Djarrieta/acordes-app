@@ -457,10 +457,14 @@ h1 {
 }
 
 .song-card[data-view="player"] [data-view-panel="player"],
-.song-card[data-view="options"] [data-view-panel="options"],
-.song-card[data-view="editor"] [data-view-panel="editor"],
 .song-card[data-view="loader"] [data-view-panel="loader"] {
   display: flex;
+}
+
+.song-card[data-view="options"] [data-view-panel="options"],
+.song-card[data-view="editor"] [data-view-panel="editor"] {
+  display: block;
+  overflow: auto;
 }
 
 .song-main {
@@ -474,11 +478,6 @@ h1 {
   align-items: center;
   justify-content: center;
   min-height: 14rem;
-}
-
-.song-view-options,
-.song-view-editor {
-  overflow: auto;
 }
 
 .song-view-options .option-group {
