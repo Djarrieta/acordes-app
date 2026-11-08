@@ -139,9 +139,11 @@ function renderVideoPanel(song: Song, searchQuery: string): string {
   const busy = isBusySong(song);
   const statusMessage = song.timestampsError
     ? `<p class="enrichment-error" role="alert">${escapeHtml(song.timestampsError)}</p>`
-    : busy
-      ? renderLoader()
-      : "";
+    : song.videoError
+      ? `<p class="enrichment-error" role="alert">${escapeHtml(song.videoError)}</p>`
+      : busy
+        ? renderLoader()
+        : "";
 
   const videoSummary = video
     ? `<div class="video-current">

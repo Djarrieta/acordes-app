@@ -40,6 +40,7 @@ afterEach(() => {
 describe("video search", () => {
   test("marks the best candidate as the linked video", async () => {
     setEnrichmentProvidersForTests({
+      transcript: async () => null,
       search: async () => [
         {
           videoId: "abcdefghijk",
@@ -70,7 +71,10 @@ describe("video search", () => {
   });
 
   test("reports a failure when YouTube returns no candidates", async () => {
-    setEnrichmentProvidersForTests({ search: async () => [] });
+    setEnrichmentProvidersForTests({
+      transcript: async () => null,
+      search: async () => [],
+    });
 
     enqueueVideoSearch(song.id, db);
     await waitForEnrichment();
@@ -83,6 +87,7 @@ describe("video search", () => {
 
   test("does not fail the song when the provider throws", async () => {
     setEnrichmentProvidersForTests({
+      transcript: async () => null,
       search: async () => {
         throw new Error("network down");
       },
@@ -94,6 +99,95 @@ describe("video search", () => {
     const updated = getSong(db, song.id)!;
     expect(updated.videoStatus).toBe("failed");
     expect(updated.videoError).toContain("No se pudo buscar");
+  });
+});
+
+describe("automatic timestamps", () => {
+  const transcript = {
+    lang: "es",
+    kind: "manual" as const,
+    raw: "{}",
+    words: [
+      { text: "primera", startMs: 1000 },
+      { text: "linea", startMs: 2000 },
+    ],
+  };
+
+  test("generates timestamps automatically once the video is found", async () => {
+    setEnrichmentProvidersForTests({
+      search: async () => [
+        {
+          videoId: "abcdefghijk",
+          title: "Canción (video oficial)",
+          channel: "Artista",
+          durationMs: 180_000,
+          rank: 0,
+        },
+      ],
+      transcript: async () => transcript,
+    });
+
+    enqueueVideoSearch(song.id, db);
+    await waitForEnrichment();
+
+    const updated = getSong(db, song.id)!;
+    expect(updated.video?.id).toBe("abcdefghijk");
+    expect(updated.timestampsStatus).toBe("ready");
+    expect(updated.lines[0]!.chords[0]!.timestampMs).toBe(1000);
+    expect(updated.lines[0]!.chords[0]!.timestampSource).toBe("auto");
+  });
+
+  test("tries the next candidate when the best has no transcript", async () => {
+    setEnrichmentProvidersForTests({
+      search: async () => [
+        {
+          videoId: "abcdefghijk",
+          title: "Canción sin subtítulos",
+          channel: "Artista",
+          durationMs: 180_000,
+          rank: 0,
+        },
+        {
+          videoId: "lmnopqrstuv",
+          title: "Canción con subtítulos",
+          channel: "Artista",
+          durationMs: 200_000,
+          rank: 1,
+        },
+      ],
+      transcript: async (videoId: string) => (videoId === "lmnopqrstuv" ? transcript : null),
+    });
+
+    enqueueVideoSearch(song.id, db);
+    await waitForEnrichment();
+
+    const updated = getSong(db, song.id)!;
+    expect(updated.video?.id).toBe("lmnopqrstuv");
+    expect(updated.timestampsStatus).toBe("ready");
+    expect(listCandidates(db, song.id)).toHaveLength(2);
+  });
+
+  test("surfaces an error when no candidate has a usable transcript", async () => {
+    setEnrichmentProvidersForTests({
+      search: async () => [
+        {
+          videoId: "abcdefghijk",
+          title: "Canción",
+          channel: "Artista",
+          durationMs: 180_000,
+          rank: 0,
+        },
+      ],
+      transcript: async () => null,
+    });
+
+    enqueueVideoSearch(song.id, db);
+    await waitForEnrichment();
+
+    const updated = getSong(db, song.id)!;
+    expect(updated.video?.id).toBe("abcdefghijk");
+    expect(updated.timestampsStatus).toBe("failed");
+    expect(updated.timestampsError).toContain("subtítulos");
   });
 });
 

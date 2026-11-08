@@ -222,6 +222,7 @@ export async function handleSongsRoutes(
       durationMs: candidate?.durationMs ?? null,
     });
     recordEdit(db, song.id, "video.set", { videoId });
+    enqueueAlignment(song.id, db);
     return json({ ok: true, videoId });
   }
 

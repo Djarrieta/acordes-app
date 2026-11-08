@@ -3,6 +3,11 @@ import type { Database } from "bun:sqlite";
 import { openDatabase, setDb } from "../src/db";
 import { resetRateLimits } from "../src/core/ratelimit";
 import { createSong, getSong, setChordTimestamp, setVideoStatus } from "../src/songs/songs.db";
+import {
+  resetEnrichmentProviders,
+  setEnrichmentProvidersForTests,
+  waitForEnrichment,
+} from "../src/songs/enrichment/enrichment.service";
 import { handleSongsRoutes } from "../src/songs/songs.routes";
 import type { Song } from "../src/songs/songs.model";
 
@@ -27,6 +32,8 @@ beforeEach(() => {
   db = openDatabase(":memory:");
   setDb(db);
   resetRateLimits();
+  resetEnrichmentProviders();
+  setEnrichmentProvidersForTests({ transcript: async () => null });
   song = createSong(db, {
     sourceKey: "/artista/cancion.shtml",
     sourceUrl: "https://acordes.lacuerda.net/artista/cancion.shtml",
@@ -40,6 +47,7 @@ beforeEach(() => {
 });
 
 afterEach(() => {
+  resetEnrichmentProviders();
   setDb(null);
   db.close();
 });
@@ -201,6 +209,7 @@ describe("song routes", () => {
     expect(confirmed.status).toBe(200);
     expect(getSong(db, song.id)!.video?.id).toBe("lmnopqrstuv");
     expect(getSong(db, song.id)!.lines[0]!.chords[0]!.timestampMs).toBeNull();
+    await waitForEnrichment();
   });
 
   test("returns null for unrelated paths", async () => {

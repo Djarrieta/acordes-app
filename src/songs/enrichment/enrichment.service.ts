@@ -4,6 +4,7 @@ import {
   applyAutoTimestamps,
   getSong,
   incrementTimestampsAttempts,
+  listCandidates,
   listSongsNeedingResume,
   recordEdit,
   replaceCandidates,
@@ -104,6 +105,7 @@ async function runVideoSearch(db: ReturnType<typeof getDb>, songId: string): Pro
       durationMs: best.durationMs,
     });
     recordEdit(db, songId, "video.auto", { videoId: best.videoId });
+    enqueueAlignment(songId, db);
   } catch (error) {
     console.error("No se pudo buscar el video automáticamente:", error);
     setVideoStatus(
@@ -142,26 +144,56 @@ async function runAlignment(db: ReturnType<typeof getDb>, songId: string): Promi
   }
   incrementTimestampsAttempts(db, songId);
   setTimestampsStatus(db, songId, "transcribing");
+  const candidates = listCandidates(db, songId);
+  const attempts = [
+    { videoId: song.video.id, title: song.video.title, channel: song.video.channel, durationMs: song.video.durationMs },
+    ...candidates
+      .filter((candidate) => candidate.videoId !== song.video!.id)
+      .map((candidate) => ({
+        videoId: candidate.videoId,
+        title: candidate.title,
+        channel: candidate.channel,
+        durationMs: candidate.durationMs,
+      })),
+  ];
   let transcript: Transcript | null = null;
-  try {
-    transcript = await providers.transcript(song.video.id);
-  } catch (error) {
-    console.error("No se pudo transcribir el video:", error);
+  let chosenVideoId = song.video.id;
+  for (const attempt of attempts) {
+    try {
+      transcript = await providers.transcript(attempt.videoId);
+    } catch (error) {
+      console.error("No se pudo transcribir el video:", error);
+      transcript = null;
+    }
+    if (transcript) {
+      chosenVideoId = attempt.videoId;
+      if (attempt.videoId !== song.video.id) {
+        setVideo(db, songId, {
+          id: attempt.videoId,
+          url: `https://www.youtube.com/watch?v=${attempt.videoId}`,
+          title: attempt.title,
+          channel: attempt.channel,
+          durationMs: attempt.durationMs,
+        });
+        recordEdit(db, songId, "video.auto", { videoId: attempt.videoId });
+      }
+      break;
+    }
+    updateCandidateTranscript(db, songId, attempt.videoId, false, null);
   }
   if (!transcript) {
-    updateCandidateTranscript(db, songId, song.video.id, false, null);
     setTimestampsStatus(
       db,
       songId,
       "failed",
-      "El video no tiene subtítulos utilizables. Elige otro candidato o marca los acordes a mano.",
+      "Ningún video disponible tiene subtítulos utilizables. Elige otro candidato o marca los acordes a mano.",
     );
     return;
   }
 
   saveTranscript(db, {
     songId,
-    videoId: song.video.id,
+    videoId: chosenVideoId,
     lang: transcript.lang,
     kind: transcript.kind,
     raw: transcript.raw,
@@ -180,7 +212,7 @@ async function runAlignment(db: ReturnType<typeof getDb>, songId: string): Promi
     transcript.words,
   );
 
-  updateCandidateTranscript(db, songId, song.video.id, true, result.coverage);
+  updateCandidateTranscript(db, songId, chosenVideoId, true, result.coverage);
 
   if (result.coverage >= 0.6 && result.lineCoverage >= 0.5 && result.updates.length > 0) {
     applyAutoTimestamps(db, songId, result.updates);
