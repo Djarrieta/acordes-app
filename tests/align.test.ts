@@ -10,8 +10,8 @@ describe("alignLyrics", () => {
             id: "line-1",
             lyric: "brilla la mañana",
             chords: [
-              { id: "chord-1", column: 0 },
-              { id: "chord-2", column: 7 },
+              { index: 0, column: 0 },
+              { index: 1, column: 7 },
             ],
           },
         ],
@@ -26,8 +26,8 @@ describe("alignLyrics", () => {
     expect(result.coverage).toBe(1);
     expect(result.lineCoverage).toBe(1);
     expect(result.updates).toEqual([
-      { chordId: "chord-1", timestampMs: 1000, confidence: 1 },
-      { chordId: "chord-2", timestampMs: 1500, confidence: 1 },
+      { lineId: "line-1", chordIndex: 0, timestampMs: 1000, confidence: 1 },
+      { lineId: "line-1", chordIndex: 1, timestampMs: 1500, confidence: 1 },
     ]);
   });
 
@@ -38,12 +38,12 @@ describe("alignLyrics", () => {
           {
             id: "line-1",
             lyric: "corazon herido",
-            chords: [{ id: "chord-1", column: 0 }],
+            chords: [{ index: 0, column: 0 }],
           },
           {
             id: "line-2",
             lyric: "corazon herido",
-            chords: [{ id: "chord-2", column: 0 }],
+            chords: [{ index: 0, column: 0 }],
           },
         ],
       },
@@ -55,8 +55,8 @@ describe("alignLyrics", () => {
       ],
     );
 
-    expect(result.updates.find((update) => update.chordId === "chord-1")?.timestampMs).toBe(500);
-    expect(result.updates.find((update) => update.chordId === "chord-2")?.timestampMs).toBe(3000);
+    expect(result.updates.find((update) => update.lineId === "line-1")?.timestampMs).toBe(500);
+    expect(result.updates.find((update) => update.lineId === "line-2")?.timestampMs).toBe(3000);
   });
 
   test("ignores noise lines and reports low coverage", () => {
@@ -67,7 +67,7 @@ describe("alignLyrics", () => {
           {
             id: "line-1",
             lyric: "palabras que no aparecen",
-            chords: [{ id: "chord-1", column: 0 }],
+            chords: [{ index: 0, column: 0 }],
           },
         ],
       },
@@ -83,9 +83,9 @@ describe("alignLyrics", () => {
     const result = alignLyrics(
       {
         lines: [
-          { id: "line-1", lyric: "primera linea", chords: [{ id: "chord-1", column: 0 }] },
-          { id: "line-2", lyric: "", chords: [{ id: "chord-2", column: 0 }] },
-          { id: "line-3", lyric: "tercera linea", chords: [{ id: "chord-3", column: 0 }] },
+          { id: "line-1", lyric: "primera linea", chords: [{ index: 0, column: 0 }] },
+          { id: "line-2", lyric: "", chords: [{ index: 0, column: 0 }] },
+          { id: "line-3", lyric: "tercera linea", chords: [{ index: 0, column: 0 }] },
         ],
       },
       [
@@ -96,7 +96,7 @@ describe("alignLyrics", () => {
       ],
     );
 
-    const interlude = result.updates.find((update) => update.chordId === "chord-2");
+    const interlude = result.updates.find((update) => update.lineId === "line-2");
     expect(interlude?.timestampMs).toBe(3100);
   });
 });

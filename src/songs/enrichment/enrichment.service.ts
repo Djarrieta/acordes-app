@@ -206,7 +206,7 @@ async function runAlignment(db: ReturnType<typeof getDb>, songId: string): Promi
       lines: song.lines.map((line) => ({
         id: line.id,
         lyric: line.lyric,
-        chords: line.chords.map((chord) => ({ id: chord.id, column: chord.column })),
+        chords: line.chords.map((chord) => ({ index: chord.position, column: chord.column })),
       })),
     },
     transcript.words,

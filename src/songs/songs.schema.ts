@@ -41,28 +41,13 @@ CREATE TABLE IF NOT EXISTS song_lines (
   id          TEXT PRIMARY KEY,
   song_id     TEXT NOT NULL REFERENCES songs(id) ON DELETE CASCADE,
   position    INTEGER NOT NULL,
-  lyric       TEXT NOT NULL DEFAULT '',
+  text        TEXT NOT NULL DEFAULT '',
   is_manual   INTEGER NOT NULL DEFAULT 0,
   created_at  TEXT NOT NULL,
   updated_at  TEXT NOT NULL,
   UNIQUE (song_id, position)
 );
 CREATE INDEX IF NOT EXISTS idx_song_lines_song ON song_lines(song_id, position);
-
-CREATE TABLE IF NOT EXISTS song_chords (
-  id               TEXT PRIMARY KEY,
-  line_id          TEXT NOT NULL REFERENCES song_lines(id) ON DELETE CASCADE,
-  position         INTEGER NOT NULL,
-  name             TEXT NOT NULL,
-  column           INTEGER NOT NULL,
-  timestamp_ms     INTEGER,
-  timestamp_source TEXT NOT NULL DEFAULT 'none',
-  confidence       REAL,
-  created_at       TEXT NOT NULL,
-  updated_at       TEXT NOT NULL,
-  UNIQUE (line_id, position)
-);
-CREATE INDEX IF NOT EXISTS idx_song_chords_line ON song_chords(line_id, position);
 
 CREATE TABLE IF NOT EXISTS song_transcripts (
   id          TEXT PRIMARY KEY,

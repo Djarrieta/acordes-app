@@ -5,51 +5,21 @@ function hiddenVersion(song: Song): string {
   return `<input type="hidden" name="version" value="${song.version}">`;
 }
 
-function editorChords(song: Song, lineId: string, linePosition: number): string {
-  const line = song.lines.find((item) => item.id === lineId);
-  if (!line) return "";
-  const chords = line.chords
-    .map(
-      (chord) => `<li class="editor-chord">
-        <form class="editor-chord-form" hx-post="/songs/${escapeHtml(song.id)}/chords/${escapeHtml(chord.id)}" hx-target="#song-editor-body" hx-swap="innerHTML">
-          ${hiddenVersion(song)}
-          <label>Acorde <input name="name" value="${escapeHtml(chord.name)}" maxlength="30" required></label>
-          <label>Columna <input name="column" type="number" min="0" step="1" value="${chord.column}" required></label>
-          <button type="submit" class="secondary">Guardar</button>
-        </form>
-        <form hx-post="/songs/${escapeHtml(song.id)}/chords/${escapeHtml(chord.id)}/delete" hx-target="#song-editor-body" hx-swap="innerHTML">
-          ${hiddenVersion(song)}
-          <button type="submit" class="secondary danger">Eliminar</button>
-        </form>
-      </li>`,
-    )
-    .join("");
-
-  return `<ul class="editor-chords">${chords}</ul>
-    <form class="editor-add-chord" hx-post="/songs/${escapeHtml(song.id)}/lines/${escapeHtml(lineId)}/chords" hx-target="#song-editor-body" hx-swap="innerHTML">
-      ${hiddenVersion(song)}
-      <input type="hidden" name="linePosition" value="${linePosition}">
-      <label>Nuevo acorde <input name="name" maxlength="30" placeholder="Am" required></label>
-      <label>Columna <input name="column" type="number" min="0" step="1" value="0" required></label>
-      <button type="submit" class="secondary">Añadir acorde</button>
-    </form>`;
-}
-
 export function renderEditor(song: Song): string {
   const lines = song.lines
     .map(
       (line) => `<section class="editor-line" data-line-id="${escapeHtml(line.id)}">
         <form class="editor-line-form" hx-post="/songs/${escapeHtml(song.id)}/lines/${escapeHtml(line.id)}" hx-target="#song-editor-body" hx-swap="innerHTML">
           ${hiddenVersion(song)}
-          <label class="editor-line-text">Letra
-            <textarea name="lyric" rows="2" maxlength="2000">${escapeHtml(line.lyric)}</textarea>
+          <label class="editor-line-text">Letra y acordes
+            <textarea name="text" rows="2" maxlength="2000" spellcheck="false">${escapeHtml(line.text)}</textarea>
           </label>
+          <p class="editor-hint">Escribe los acordes entre corchetes pegados a su palabra, p. ej. <code>[Am]Debajo de la [G]morera</code>. Las marcas de tiempo van dentro del acorde: <code>[Am@12.3]</code> (segundos). No escribas columnas.</p>
           <label class="editor-line-position">Posición
             <input name="position" type="number" min="0" step="1" value="${line.position}">
           </label>
           <button type="submit" class="secondary">Guardar línea</button>
         </form>
-        ${editorChords(song, line.id, line.position)}
         <form hx-post="/songs/${escapeHtml(song.id)}/lines/${escapeHtml(line.id)}/delete" hx-target="#song-editor-body" hx-swap="innerHTML">
           ${hiddenVersion(song)}
           <button type="submit" class="secondary danger">Eliminar línea</button>

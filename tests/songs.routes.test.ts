@@ -40,8 +40,8 @@ beforeEach(() => {
     title: "Canción",
     artist: "Artista",
     lines: [
-      { lyric: "primera linea", chords: [{ name: "C", column: 0 }, { name: "G", column: 7 }] },
-      { lyric: "segunda linea", chords: [{ name: "Am", column: 0 }] },
+      { text: "[C]primera [G]linea" },
+      { text: "[Am]segunda linea" },
     ],
   });
 });
@@ -111,6 +111,7 @@ describe("song routes", () => {
     );
     expect(set.status).toBe(200);
     expect(getSong(db, song.id)!.lines[0]!.chords[0]!.timestampMs).toBe(42000);
+    expect(getSong(db, song.id)!.lines[0]!.text).toContain("[C@42.0!]");
     expect(getSong(db, song.id)!.timestampSource).toBe("manual");
 
     const clear = await route(
@@ -141,52 +142,59 @@ describe("song routes", () => {
     const ok = await route(
       request(`/songs/${song.id}/lines/${lineId}`, "POST", {
         version: "1",
-        lyric: "linea editada",
+        text: "[D]linea editada",
       }),
     );
     expect(ok.status).toBe(200);
     expect(getSong(db, song.id)!.version).toBe(2);
+    expect(getSong(db, song.id)!.lines[0]!.text).toBe("[D]linea editada");
     expect(getSong(db, song.id)!.lines[0]!.lyric).toBe("linea editada");
 
     const stale = await route(
       request(`/songs/${song.id}/lines/${lineId}`, "POST", {
         version: "1",
-        lyric: "otra edicion",
+        text: "[E]otra edicion",
       }),
     );
     expect(stale.status).toBe(409);
-    expect(getSong(db, song.id)!.lines[0]!.lyric).toBe("linea editada");
+    expect(getSong(db, song.id)!.lines[0]!.text).toBe("[D]linea editada");
   });
 
-  test("validates chord names and columns in the editor", async () => {
+  test("validates inline chord text in the editor", async () => {
     const lineId = song.lines[0]!.id;
     const badName = await route(
-      request(`/songs/${song.id}/lines/${lineId}/chords`, "POST", {
+      request(`/songs/${song.id}/lines/${lineId}`, "POST", {
         version: "1",
-        name: "<script>",
-        column: "0",
+        text: "[<script>]texto",
       }),
     );
     expect(badName.status).toBe(400);
 
-    const badColumn = await route(
-      request(`/songs/${song.id}/lines/${lineId}/chords`, "POST", {
+    const unclosed = await route(
+      request(`/songs/${song.id}/lines/${lineId}`, "POST", {
         version: "1",
-        name: "D",
-        column: "abc",
+        text: "[D texto",
       }),
     );
-    expect(badColumn.status).toBe(400);
+    expect(unclosed.status).toBe(400);
+
+    const badStamp = await route(
+      request(`/songs/${song.id}/lines/${lineId}`, "POST", {
+        version: "1",
+        text: "[D@abc]texto",
+      }),
+    );
+    expect(badStamp.status).toBe(400);
 
     const ok = await route(
-      request(`/songs/${song.id}/lines/${lineId}/chords`, "POST", {
+      request(`/songs/${song.id}/lines/${lineId}`, "POST", {
         version: "1",
-        name: "D",
-        column: "3",
+        text: "[D]primera [E@3.5]linea",
       }),
     );
     expect(ok.status).toBe(200);
-    expect(getSong(db, song.id)!.lines[0]!.chords).toHaveLength(3);
+    expect(getSong(db, song.id)!.lines[0]!.chords).toHaveLength(2);
+    expect(getSong(db, song.id)!.lines[0]!.chords[1]!.timestampMs).toBe(3500);
   });
 
   test("requires confirmation before replacing a video and clears timestamps", async () => {

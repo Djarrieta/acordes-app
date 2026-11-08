@@ -4,6 +4,7 @@ import {
   fetchLacuerdaSong,
   parseLacuerdaSongUrl,
 } from "../parser/lacuerda";
+import { serializeChordProLine, validateChordProLine } from "../parser/chordpro";
 import { enqueueVideoSearch } from "./enrichment/enrichment.service";
 import {
   createSong,
@@ -42,13 +43,14 @@ export async function loadSong(
       title: parsed.title,
       artist: parsed.artist,
       lines: parsed.lines.map((line) => ({
-        lyric: line.lyric,
-        chords: line.chords.map((chord) => ({ name: chord.chord, column: chord.column })),
+        text: serializeChordProLine(
+          line.lyric,
+          line.chords.map((chord) => ({ name: chord.chord, column: chord.column })),
+        ),
       })),
     });
     recordEdit(db, song.id, "song.import", { sourceKey });
     enqueueVideoSearch(song.id, db);
-    // La búsqueda de video cambia el estado en la base; se relee para que la vista muestre "buscando".
     return { song: getSong(db, song.id) ?? song, created: true };
   } catch (error) {
     const racedId = findSongIdBySourceKey(db, sourceKey);
@@ -79,21 +81,11 @@ export function validateLineText(value: unknown): string | null {
   return text;
 }
 
-const CHORD_NAME = /^[A-Za-z0-9#b/().*+\-\s]{1,30}$/;
-
-export function validateChordName(value: unknown): string | null {
+export function validateChordProText(value: unknown): string | null {
   if (typeof value !== "string") return null;
-  const name = value.trim();
-  if (!name || name.length > MAX_CHORD_LENGTH || !CHORD_NAME.test(name)) return null;
-  return name;
-}
-
-export function validateColumn(value: unknown, lyricLength: number): number | null {
-  const raw = typeof value === "number" ? String(value) : value;
-  if (typeof raw !== "string" || !/^\d+$/.test(raw)) return null;
-  const column = Number(raw);
-  if (!Number.isSafeInteger(column) || column < 0) return null;
-  return Math.min(column, Math.max(lyricLength, 0) + 40);
+  if (value.length > MAX_LINE_LENGTH) return null;
+  if (!validateChordProLine(value, MAX_CHORDS_PER_LINE)) return null;
+  return value;
 }
 
 export function readVersion(value: unknown): number | null {

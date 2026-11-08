@@ -3,16 +3,15 @@ import { getDb } from "../db";
 import { bodyTooLarge, clientIp, html, isSameOrigin, json } from "../core/http";
 import { rateLimit } from "../core/ratelimit";
 import { fetchLacuerdaSong } from "../parser/lacuerda";
+import { serializeChordProLine } from "../parser/chordpro";
 import { renderError, renderSong } from "../render/song";
 import { parseYoutubeVideoId } from "../youtube";
 import {
-  addChord,
   addLine,
   bumpVersion,
   clearAllTimestamps,
   clearChordTimestamp,
   clearVideo,
-  deleteChord,
   deleteLine,
   getSong,
   listCandidates,
@@ -22,7 +21,6 @@ import {
   setChordTimestamp,
   setLinePosition,
   setVideo,
-  updateChord,
   updateLine,
   updateSongMeta,
 } from "./songs.db";
@@ -32,14 +30,11 @@ import {
 } from "./enrichment/enrichment.service";
 import type { Song } from "./songs.model";
 import {
-  MAX_CHORDS_PER_LINE,
   MAX_LINES,
   currentSong,
   readTrimmedString,
   readVersion,
-  validateChordName,
-  validateColumn,
-  validateLineText,
+  validateChordProText,
   validateOffset,
 } from "./songs.service";
 import { renderCandidates, renderEditor } from "./songs.views";
@@ -256,8 +251,10 @@ export async function handleSongsRoutes(
         title: parsed.title,
         artist: parsed.artist,
         lines: parsed.lines.map((line) => ({
-          lyric: line.lyric,
-          chords: line.chords.map((chord) => ({ name: chord.chord, column: chord.column })),
+          text: serializeChordProLine(
+            line.lyric,
+            line.chords.map((chord) => ({ name: chord.chord, column: chord.column })),
+          ),
         })),
       });
       updateSongMeta(db, song.id, parsed.title, parsed.artist);
@@ -311,7 +308,7 @@ export async function handleSongsRoutes(
     return updated ? editorResponse(updated) : missingSong();
   }
 
-  const lineRoute = /^\/lines\/([^/]+)(\/delete|\/chords)?$/.exec(suffix);
+  const lineRoute = /^\/lines\/([^/]+)(\/delete)?$/.exec(suffix);
   if (lineRoute) {
     const lineId = decodeURIComponent(lineRoute[1]!);
     const action = lineRoute[2] ?? "";
@@ -332,24 +329,13 @@ export async function handleSongsRoutes(
       return updated ? editorResponse(updated) : missingSong();
     }
 
-    if (action === "/chords") {
-      const name = validateChordName(form.get("name"));
-      const column = validateColumn(form.get("column"), line.lyric.length);
-      if (!name) return badRequest("El nombre del acorde no es válido.");
-      if (column === null) return badRequest("La columna del acorde no es válida.");
-      if (line.chords.length >= MAX_CHORDS_PER_LINE) {
-        return badRequest(`Una línea no puede tener más de ${MAX_CHORDS_PER_LINE} acordes.`);
-      }
-      addChord(db, song.id, lineId, { name, column });
-      bumpVersion(db, song.id);
-      recordEdit(db, song.id, "chord.add", { lineId, name, column });
-      const updated = editorSong(db, song.id);
-      return updated ? editorResponse(updated) : missingSong();
+    const text = validateChordProText(form.get("text"));
+    if (text === null) {
+      return badRequest(
+        "El texto de la línea no es válido: revisa los acordes [Am], las marcas [Am@12.3] y los corchetes.",
+      );
     }
-
-    const lyric = validateLineText(form.get("lyric"));
-    if (lyric === null) return badRequest("El texto de la línea no es válido.");
-    updateLine(db, song.id, lineId, lyric);
+    updateLine(db, song.id, lineId, text);
     const positionValue = form.get("position");
     if (positionValue !== null) {
       const position = Number(positionValue);
@@ -359,36 +345,7 @@ export async function handleSongsRoutes(
       if (position !== line.position) setLinePosition(db, song.id, lineId, position);
     }
     bumpVersion(db, song.id);
-    recordEdit(db, song.id, "line.update", { lineId, lyric });
-    const updated = editorSong(db, song.id);
-    return updated ? editorResponse(updated) : missingSong();
-  }
-
-  const chordRoute = /^\/chords\/([^/]+)(\/delete)?$/.exec(suffix);
-  if (chordRoute) {
-    const chordId = decodeURIComponent(chordRoute[1]!);
-    const form = await readForm(request);
-    if (!form) return badRequest("No se pudo leer la solicitud.");
-    const song = getSong(db, songId);
-    if (!song) return missingSong();
-    const guard = versionGuard(song, form);
-    if (guard) return guard;
-    if (chordRoute[2]) {
-      if (!deleteChord(db, song.id, chordId)) return missingSong();
-      bumpVersion(db, song.id);
-      recordEdit(db, song.id, "chord.delete", { chordId });
-      const updated = editorSong(db, song.id);
-      return updated ? editorResponse(updated) : missingSong();
-    }
-    const lyricLength =
-      song.lines.find((line) => line.chords.some((chord) => chord.id === chordId))?.lyric.length ?? 0;
-    const name = validateChordName(form.get("name"));
-    const column = validateColumn(form.get("column"), lyricLength);
-    if (!name) return badRequest("El nombre del acorde no es válido.");
-    if (column === null) return badRequest("La columna del acorde no es válida.");
-    if (!updateChord(db, song.id, chordId, { name, column })) return missingSong();
-    bumpVersion(db, song.id);
-    recordEdit(db, song.id, "chord.update", { chordId, name, column });
+    recordEdit(db, song.id, "line.update", { lineId, text });
     const updated = editorSong(db, song.id);
     return updated ? editorResponse(updated) : missingSong();
   }

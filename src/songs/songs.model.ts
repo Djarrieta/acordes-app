@@ -24,6 +24,7 @@ export type SongChord = {
 export type SongLine = {
   id: string;
   position: number;
+  text: string;
   lyric: string;
   isManual: boolean;
   chords: SongChord[];

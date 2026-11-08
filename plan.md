@@ -848,4 +848,262 @@ esos valores.
 
 Fase 1 completada y desplegada. Siguiente: fase 2 (Google OAuth), cuando lo
 decidas; queda por decidir si favoritos/transposición se quedan compartidos o
-se mueven a la cuenta.
+se mueven a la cuenta. Propuesta abierta: sección 17 (edición manual de
+acordes con formato inline tipo ChordPro). Sin implementar.
+
+---
+
+## 17. Propuesta: edición manual de acordes con texto inline (ChordPro)
+
+Estado: **implementado**. Objetivo: que corregir un acorde
+equivocado o añadir uno que falta en LaCuerda sea tan fácil como editar una
+frase, en vez de adivinar una columna numérica. Se acepta complicar el código
+de importación/traducción LaCuerda → base de datos.
+
+### 17.1 Por qué hoy editar acordes es difícil (evidencia en el código)
+
+1. **La posición es un entero invisible.** Cada acorde se guarda como
+   `song_chords(name, column)` (`src/songs/songs.schema.ts:52-65`), donde
+   `column` es el desplazamiento en caracteres dentro de la línea. El editor
+   (`src/songs/songs.views.ts:8-36`) pide ese número a mano: «Columna
+   `<input type="number" value="0">`». Nada en pantalla dice qué palabra es la
+   columna 12, así que mover un acorde 3 caracteres a la derecha exige
+   contar a ojo y guardar para ver el resultado.
+2. **Un formulario HTMX por acorde.** Añadir/editar/borrar cada acorde es un
+   POST independiente (`src/songs/songs.routes.ts:314-394`) que re-renderiza
+   todo el editor y sube `songs.version`. Corregir 5 acordes de una línea =
+   5 guardados, 5 recargas del editor y 5 conflictos potenciales de versión.
+3. **La columna no sobrevive a editar la letra.** Al cambiar `lyric` las
+   columnas se conservan tal cual (`plan.md` §5.6, decisión 15): si se inserta
+   una palabra al principio, todos los acordes quedan desplazados en
+   silencio y hay que reajustarlos uno a uno.
+4. **El render redondea a palabra, pero el dato no lo sabe.**
+   `assignChords` (`src/render/song.ts:70-77`) asigna cada acorde a la
+   palabra que contiene su columna (o a la siguiente). Es decir: la
+   presentación ya es «acorde sobre palabra», pero el almacenamiento sigue
+   siendo «acorde en carácter N». El usuario edita caracteres y el sistema
+   muestra palabras.
+5. **Refrescar desde LaCuerda es frágil por posición.** `refreshNonManualLines`
+   (`src/songs/songs.db.ts:668-758`) compara línea por línea según `position`
+   y conserva timestamps solo si coinciden `position + name + column`
+   exactos. Un acorde movido a mano hace que su marca se pierda al refrescar.
+6. **LaCuerda llega en dos líneas** (`src/parser/lacuerda.ts:109-139`): una de
+   acordes y otra de letra, unidas por el parser con columnas calculadas en
+   `parseChordLine` (`lacuerda.ts:52-72`). Ese formato también es incómodo
+   de editar a mano (espacios monoespaciados invisibles), pero al menos es
+   *visible*: el acorde está físicamente sobre su palabra.
+
+### 17.2 Opciones consideradas
+
+| Opción | Forma de edición | Pros | Contras | Veredicto |
+|---|---|---|---|---|
+| A. Columna (actual) | Número de carácter | Sin cambios | Invisible, frágil ante edición de letra | Descartar |
+| B. Índice de palabra (`word_index` + orden) | «Acorde en la palabra 7» | Estable al editar caracteres dentro de la palabra; coincide con el render actual | Sigue siendo un número: hay que contar palabras; no muestra el acorde en contexto | Insuficiente por sí sola |
+| C. Texto inline tipo ChordPro: `[Am]Pa-ra [C]pobrecito` | Editar una frase, el acorde va pegado a su sílaba | Visible, local, copiable, estándar (ChordPro, ver 17.3) | Requiere parser/serializador propio y conversión de LaCuerda | **Recomendada** |
+| D. Dos líneas monoespaciadas (formato LaCuerda crudo) | Editar el bloque tal cual llega | Cero traducción | Espacios invisibles, se rompe al pegar en HTML; es el problema de origen, no la solución | Descartar |
+| E. Arrastrar y soltar sobre palabras (solo UI) | Clic en palabra → escribir acorde | Muy intuitivo | Sin cambio de modelo, la columna se sigue calculando en cliente y puede derivar; no resuelve el guardado por acorde ni el refresco | Complemento de C, no alternativa |
+
+La recomendación es **C como fuente de verdad editable + E como ayuda
+visual opcional encima**. B puede vivir como campo derivado (útil para
+alineación y auditoría), pero no como forma de entrada.
+
+### 17.3 Referencia: formato ChordPro
+
+ChordPro es el estándar de facto para letra con acordes inline: la letra va
+intercalada con acordes entre corchetes justo delante de la sílaba donde
+cambia el acorde, y las directivas (`{title: ...}`, `{start_of_chorus}`) van
+entre llaves (<https://chordpro.org/chordpro/chordpro-introduction/>):
+
+```text
+{title: Debajo de la morera}
+[Am@12.3]Debajo de la [G]morera, [F@15.0]debajo de la [E7]cruz
+```
+
+- Los corchetes delimitan el acorde; ChordPro lo imprime encima de la
+  sílaba, exactamente como ya hace `src/render/song.ts`.
+- Empieza con `*` (`[*Coda]`) para anotaciones que no son acordes.
+- Es texto plano: se puede pegar, versionar y revisar a ojo el diff.
+- No se adoptan las directivas de ChordPro en v1 (solo título/artista
+  pueden expresarse); solo se toma la convención `[Acorde]texto`, que es
+  todo lo que necesita el modelo actual. Si mañana se quieren secciones
+  (verso/estribillo), las directivas ya existen como extensión natural.
+- **Extensión propia: timestamp dentro del token.** `[Am@12.3]` significa
+  acorde `Am` con marca a los 12,3 s del video (`12300 ms`). Sin `@` no hay
+  marca. El `@` y los segundos van dentro de los corchetes para que la
+  marca viaje con el acorde al moverlo/copiarlo, sin tabla aparte que
+  sincronizar. El renderer muestra el acorde como hoy y usa el `@` como
+  `data-chord-time`; el usuario nunca tiene que escribirlo a mano
+  (lo escribe el modo marcas y la alineación automática).
+
+### 17.4 Modelo propuesto
+
+**Fuente única de verdad: una columna de texto por línea.** Cada línea
+guarda su letra *con* acordes y timestamps inline, p. ej. en
+`song_lines.text TEXT`:
+
+```text
+[Am@12.3]Debajo de la [G]morera, [F@15.0]debajo de la [E7]cruz
+```
+
+- **No hay tabla `song_chords`.** Letra, acorde, posición y timestamp
+  viven en el mismo texto; el parser de ChordPro (17.6) lo convierte al
+  leer en la estructura que ya consumen renderer, alineación y
+  reproductor (`{lyric, chords[{name, column, wordIndex, timestampMs}]}`).
+  Nada que sincronizar: si el usuario mueve `[Am@12.3]`, su marca se mueve
+  con él. En una POC el coste de parsear el texto por request es
+  despreciable frente a la complejidad de mantener una proyección.
+- Alternativa equivalente: tabla nueva `song_line_texts(line_id, text,
+  updated_at)` y dejar `song_lines.lyric` como letra limpia derivada. Es
+  más limpio si se espera multi-idioma o varias representaciones; si no,
+  la columna en `song_lines` basta. Preferir la tabla si se prevé guardar
+  también el texto fuente crudo de LaCuerda para depurar importaciones.
+- **Sintaxis del token:** `[Nombre]` o `[Nombre@segundos]`.
+  - `Nombre`: mismo patrón actual (`validateChordName`,
+    `songs.service.ts:82-89`).
+  - `segundos`: decimal con punto, p. ej. `12.3` = `12300 ms`. Se valida
+    rango (0 a 24 h, como hoy en `songs.routes.ts:289`) y se redondea a ms
+    al derivar. Una fracción de segundo basta para el resaltado actual.
+  - Sin `@`, `timestampMs = null`. El origen de la marca (`auto`/`manual`)
+    no necesita guardarse por acorde si se acepta perder esa distinción
+    (ver decisión 17.8.4); el estado global de la canción
+    (`songs.timestamp_source`, cobertura) se mantiene.
+- **La UI sigue mostrando varias líneas.** El texto se guarda por línea
+  (una fila de `song_lines` = una línea visible, con su `position` como
+  hoy); el renderer parsea cada línea y dibuja acorde sobre palabra
+  exactamente como ahora (`src/render/song.ts`). Lo que cambia es solo el
+  formato de edición, no la presentación.
+- **Marcar timestamps sin editor de texto.** El modo marcas actual pulsa
+  un acorde en el reproductor (`POST /chords/:chordId/timestamp`). Con el
+  texto como fuente, ese endpoint pasa a reescribir el token en el texto
+  de la línea (`[Am]` → `[Am@12.3]`) en vez de actualizar una fila de
+  `song_chords`. El `chordId` puede seguir siendo un índice derivado
+  estable en el render (`línea + orden del acorde`), no una fila en DB.
+  Borrar marca = quitar el `@12.3` del token. La alineación automática
+  escribe los `@` directamente en el texto.
+
+### 17.5 Flujo de edición (UX)
+
+1. **Un textarea por línea** (o uno por canción) con el texto ChordPro.
+   Editar `[G]` por `[C]`, moverlo de sitio o añadir `[Em]nuevo` delante de
+   una palabra son operaciones de texto normales; vista previa del
+   reproductor al guardar, sin numeritos.
+2. **Guardado por línea, no por acorde**: un POST por línea con
+   `version`, validación servidor (nombres de acorde con el patrón actual
+   `validateChordName`, `songs.service.ts:82-89`; longitud máxima;
+   corchetes balanceados; `@segundos` con formato y rango válidos) y
+   escritura del texto completo en `song_lines.text`. Corregir 5 acordes =
+   1 guardado. No hay nada que re-derivar ni persistir aparte: el texto
+   *es* el dato.
+3. **Ayuda visual opcional** (opción E, fase posterior): clic sobre una
+   palabra del reproductor en modo edición inserta `[?]`/`[Acorde]` en esa
+   posición del texto; arrastrar un acorde entre palabras reescribe el
+   texto. El texto sigue siendo la fuente de verdad; la UI solo lo edita.
+4. **Errores visibles**: acorde con nombre inválido o corchete sin cerrar
+   → `400` señalando la línea y el fragmento, sin guardar nada.
+
+### 17.6 Traducción LaCuerda → ChordPro (el coste asumido)
+
+El parser actual ya produce `SongLine[]` con `lyric` + `chords[{chord,
+column}]` (`src/parser/lacuerda.ts:103-149`). La traducción es un
+serializador nuevo (p. ej. `src/parser/chordpro.ts`, simétrico al parser,
+siguiendo la separación parser/transpose/render de `AGENTS.md`):
+
+1. Ordenar acordes de la línea por `column`.
+2. Recorrer la letra insertando `[nombre]` en cada columna. Casos a cubrir:
+   - columna 0 (acorde antes de la primera palabra),
+   - varios acordes en la misma columna (`[F][C]texto`),
+   - columna dentro de una palabra (acorde en mitad de sílaba:
+     `Pa[Am]ra` — ChordPro lo soporta; el render actual ya lo asigna a esa
+     palabra),
+   - columna más allá del final de la letra (acordes instrumentales):
+     se añaden al final de la línea, p. ej. `[A]  `; documentar que el
+     render los muestra tras la última palabra,
+   - línea vacía con solo acordes: la línea es solo tokens `[A][E]`,
+   - letra que contiene `[` o `]` literales: escapar (p. ej. `\[`) o
+     rechazar en la importación si aparece (hoy no ocurre en LaCuerda;
+     dejar test con fixture).
+3. **Columnas en caracteres, no bytes**: `parseChordLine` cuenta
+   `string.length` (UTF-16). Con acentos/ñ el conteo visual coincide por
+   carácter; añadir tests con letra acentuada para fijar el comportamiento.
+
+La ruta inversa (leer → estructura de render) es el parser ChordPro:
+extrae tokens `[nombre]` o `[nombre@segundos]`, calcula `column` sobre la
+letra resultante, `timestampMs = round(segundos * 1000)` cuando hay `@` y
+`word_index` reaprovechando `splitWords`/`assignChords` de
+`src/render/song.ts:62-77`. La serialización inversa (marcas/alineación →
+texto) inserta o actualiza el `@segundos` del token correspondiente.
+
+### 17.7 Sin retrocompatibilidad: base limpia, sin migraciones
+
+Decisión: **no hay datos reales de producción que preservar** (POC en
+desarrollo). No se escribe código de migración, backfill ni rollback.
+
+1. Esquema nuevo desde cero con `SCHEMA_VERSION = 1`: `song_lines.text`
+   guarda el formato inline; la tabla `song_chords` desaparece del esquema
+   (y con ella `timestamp_ms`/`timestamp_source`/`confidence` por acorde,
+   que ahora viven como `@segundos` en el texto).
+2. Se borra `data/app.sqlite` y se regenera al arrancar con el esquema
+   nuevo. Las canciones se reimportan desde LaCuerda al cargarlas
+   (`POST /load` ya existe) y el video/marcas se regeneran con la
+   búsqueda y alineación actuales.
+3. **Refresco desde LaCuerda** (§5.7): re-importa a texto ChordPro
+   directamente (sin `@`, porque LaCuerda no trae tiempos) y solo
+   actualiza las líneas con `is_manual = 0` (criterio actual). Las líneas
+   editadas a mano se preservan enteras, incluidos sus `@`; ya no depende
+   de que coincidan `position/name/column` en ninguna tabla.
+4. Pruebas con fixtures (prohibida red en tests, `AGENTS.md`): HTML de
+   LaCuerda → texto ChordPro esperado; texto ChordPro → estructura de
+   render esperada (letra, columnas, `timestampMs`); ida y vuelta sin
+   cambios; casos de 17.6.2; marca que viaja con el acorde al moverlo;
+   `@` inválido rechazado.
+
+### 17.8 Decisiones abiertas
+
+1. **Granularidad del texto**: ¿un textarea por línea o uno por canción
+   completa? Por canción es más cómodo para pegar/reordenar versos; por
+   línea encaja con la API actual (`/lines/:lineId`). Recomendación: por
+   línea en v1, unificar después si se pide.
+2. **Columna en `song_lines` vs tabla nueva** (17.4). Recomendación:
+   columna si no se necesita multi-idioma; tabla si se quiere guardar el
+   bloque crudo de LaCuerda junto al texto editable para depuración.
+3. **Directivas ChordPro**: ¿se soportan `{start_of_chorus}` etc. en v1 o
+   solo `[acordes]`? Recomendación: solo `[acordes]`; añadir directivas
+   cuando se pida marcar secciones.
+4. **Origen de la marca por acorde**: con el `@` en el texto se pierde la
+   distinción `auto`/`manual` por acorde (hoy `timestamp_source` en
+   `song_chords`). Implementado con la opción (b): el token admite
+   `[Am@12.3!]` para marca manual (la alineación automática nunca pisa
+   tokens con `!`); `[Am@12.3]` es automática. El `timestamp_source`
+   global de la canción se recalcula parseando los tokens.
+5. **Ayuda visual clic/arrastrar** (opción E): ¿entra en la misma
+   iteración o como mejora posterior sobre el textarea? Recomendación:
+   textarea primero (cero JS de editor), clic-para-insertar después.
+
+### 17.9 Criterios de aceptación de esta propuesta
+
+- Corregir un acorde (p. ej. `G` → `C`) o añadir uno que falta en una línea
+  es una edición de texto con **un solo guardado por línea**, sin escribir
+  ninguna columna numérica.
+- Tras guardar, el reproductor muestra el acorde sobre la palabra esperada
+  y la transposición (`src/transpose/`) sigue funcionando sin cambios.
+- La UI de reproducción no cambia: varias líneas visibles, acordes sobre
+  palabras, resaltado por `data-chord-time` derivado del `@segundos`.
+- Las marcas viajan con el acorde: mover `[Am@12.3]` conserva su tiempo;
+  quitar el `@` lo borra. Sin tablas auxiliares que sincronizar.
+- Importar una canción de LaCuerda produce texto ChordPro correcto en los
+  casos de 17.6.2 (fixtures, sin red).
+- `bun run test` y `bun run typecheck` pasan; despliegue según `AGENTS.md`
+  y verificación en <https://acordes.ingeniar.online/>.
+
+### 17.10 Qué NO cambia
+
+- Tabla `songs`, video, candidatos, transcripciones y `song_edits`.
+- Timestamps: ya no en `song_chords` (tabla eliminada); viven como
+  `@segundos` en el texto de la línea. La alineación automática (§2.4/§5.3)
+  escribe `@` en el texto en vez de filas, usando la columna derivada del
+  parser.
+- Validaciones de escritura (mismo origen, rate limit, `version`
+  optimista), transposición y renderizado `src/render/song.ts` (consume la
+  estructura derivada del parser, con `timestampMs` desde el `@`).
+- Fase 2 (Google OAuth) no se ve afectada: las ediciones comparten la
+  misma tabla de texto.

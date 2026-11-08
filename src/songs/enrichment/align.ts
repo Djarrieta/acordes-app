@@ -1,10 +1,10 @@
 import type { TranscriptWord } from "./youtube.transcript";
 
-export type AlignChord = { id: string; column: number };
+export type AlignChord = { index: number; column: number };
 export type AlignLine = { id: string; lyric: string; chords: AlignChord[] };
 export type AlignInput = { lines: AlignLine[] };
 
-export type AlignUpdate = { chordId: string; timestampMs: number; confidence: number };
+export type AlignUpdate = { lineId: string; chordIndex: number; timestampMs: number; confidence: number };
 export type AlignResult = {
   updates: AlignUpdate[];
   coverage: number;
@@ -194,7 +194,7 @@ export function alignLyrics(input: AlignInput, transcriptWords: TranscriptWord[]
         else timestamp = previous ?? next;
       }
       if (timestamp === null) continue;
-      updates.push({ chordId: chord.id, timestampMs: timestamp, confidence: coverage });
+      updates.push({ lineId: line.id, chordIndex: chord.index, timestampMs: timestamp, confidence: coverage });
     }
   });
 

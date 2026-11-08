@@ -38,8 +38,8 @@ function seed(): Song {
     title: "Canción",
     artist: "Artista",
     lines: [
-      { lyric: "primera linea", chords: [{ name: "C", column: 0 }, { name: "G", column: 8 }] },
-      { lyric: "segunda linea", chords: [{ name: "Am", column: 0 }] },
+      { text: "[C]primera [G]linea" },
+      { text: "[Am]segunda linea" },
     ],
   });
   setVideo(db, created.id, {
@@ -77,6 +77,7 @@ describe("automatic timestamps", () => {
     expect(updated.timestampSource).toBe("auto");
     expect(updated.lines[0]!.chords.map((chord) => chord.timestampMs)).toEqual([1000, 1200]);
     expect(updated.lines[1]!.chords[0]!.timestampMs).toBe(3000);
+    expect(updated.lines[0]!.text).toContain("[C@1.0]");
   });
 
   test("does not overwrite manual marks when regenerating", async () => {

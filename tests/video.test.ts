@@ -20,7 +20,7 @@ function seed(): Song {
     sourceUrl: "https://acordes.lacuerda.net/artista/cancion.shtml",
     title: "Canción",
     artist: "Artista",
-    lines: [{ lyric: "primera linea", chords: [{ name: "C", column: 0 }] }],
+    lines: [{ text: "[C]primera linea" }],
   });
 }
 
