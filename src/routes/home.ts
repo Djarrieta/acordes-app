@@ -10,7 +10,7 @@ export function homePage(): Response {
   <link rel="icon" href="data:,">
   <link rel="stylesheet" href="/public/styles.css?v=playback-2">
   <script src="https://unpkg.com/htmx.org@2.0.4"></script>
-  <script src="/public/youtube.js?v=14" defer></script>
+  <script src="/public/youtube.js?v=15" defer></script>
   <script src="/public/editor.js?v=1" defer></script>
   <script>
     const FAVORITES_KEY = "acordes-liked-songs";

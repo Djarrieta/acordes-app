@@ -294,8 +294,9 @@ function initializePlayer(section, videoId) {
         const restore = pendingPlayback;
         pendingPlayback = null;
         if (restore?.songId === songId(section) && restore.videoId === videoId) {
-          player.seekTo(restore.seconds, true);
-          if (restore.wasPlaying) player.playVideo();
+          // seekTo() sobre un reproductor sin iniciar puede arrancar la reproducción; cargar en el punto evita eso.
+          if (restore.wasPlaying) player.loadVideoById({ videoId, startSeconds: restore.seconds });
+          else player.cueVideoById({ videoId, startSeconds: restore.seconds });
         }
         setStatus(section, "Listo.");
       },
