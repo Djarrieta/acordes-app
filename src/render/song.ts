@@ -156,9 +156,9 @@ function renderVideoPanel(song: Song, searchQuery: string): string {
       : "";
 
   const candidates = video
-    ? `<details class="video-candidates" data-video-candidates hx-get="/songs/${escapeHtml(song.id)}/videos" hx-trigger="toggle once" hx-target="this" hx-swap="innerHTML">
+    ? `<details class="video-candidates" data-video-candidates hx-get="/songs/${escapeHtml(song.id)}/videos" hx-trigger="toggle once" hx-target="find .video-candidates-body" hx-swap="innerHTML">
         <summary>Ver otros candidatos</summary>
-        <p>Cargando candidatos…</p>
+        <div class="video-candidates-body"><p class="editor-hint">Cargando candidatos…</p></div>
       </details>
       <button type="button" class="youtube-unlink secondary" data-video-unlink>Quitar video</button>`
     : "";
