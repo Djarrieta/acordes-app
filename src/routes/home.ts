@@ -8,9 +8,9 @@ export function homePage(): Response {
   <meta name="color-scheme" content="light">
   <title>Acordes — transpositor</title>
   <link rel="icon" href="data:,">
-  <link rel="stylesheet" href="/public/styles.css?v=playback-7">
+  <link rel="stylesheet" href="/public/styles.css?v=playback-8">
   <script src="https://unpkg.com/htmx.org@2.0.4"></script>
-  <script src="/public/youtube.js?v=18" defer></script>
+  <script src="/public/youtube.js?v=19" defer></script>
   <script src="/public/editor.js?v=2" defer></script>
   <script>
     let likedSourceKeys = new Set();
@@ -74,17 +74,26 @@ export function homePage(): Response {
     document.addEventListener("click", (event) => {
       if (event.target instanceof Element && event.target.closest("[data-song-view]")) {
         const view = event.target.closest("[data-song-view]").dataset.songView;
+        if (view === "options") window.pauseAcordesPlayer?.();
         window.setSongView?.(view);
         return;
       }
       if (event.target instanceof Element && event.target.closest("[data-wizard-search]")) {
-        const searchPanel = document.getElementById("search-panel");
-        const songContainer = document.getElementById("song-container");
-        if (searchPanel) searchPanel.hidden = false;
-        if (songContainer) songContainer.hidden = true;
-        document.body.classList.remove("is-song-view");
-        updateWizard(1);
-        document.getElementById("search-query")?.focus();
+        const card = document.getElementById("song-container").querySelector(".song-card");
+        const view = card?.dataset.view ?? "player";
+        if (view === "editor") {
+          window.setSongView?.("options");
+        } else if (view === "options") {
+          window.setSongView?.("player");
+        } else {
+          const searchPanel = document.getElementById("search-panel");
+          const songContainer = document.getElementById("song-container");
+          if (searchPanel) searchPanel.hidden = false;
+          if (songContainer) songContainer.hidden = true;
+          document.body.classList.remove("is-song-view");
+          updateWizard(1);
+          document.getElementById("search-query")?.focus();
+        }
       }
       const dialog = document.getElementById("chord-modal");
       if (event.target === dialog && dialog instanceof HTMLDialogElement) dialog.close();

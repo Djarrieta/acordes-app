@@ -26,6 +26,13 @@ function songView(section) {
   return songCard(section)?.dataset.view ?? "player";
 }
 
+window.pauseAcordesPlayer = () => {
+  if (!player?.pauseVideo || !window.YT?.PlayerState) return;
+  if (player.getPlayerState() === window.YT.PlayerState.PLAYING) {
+    player.pauseVideo();
+  }
+};
+
 function setStatus(section, message) {
   const status = section?.querySelector("[data-youtube-status]");
   if (status) status.textContent = message;

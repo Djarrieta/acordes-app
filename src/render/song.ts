@@ -263,9 +263,6 @@ export function renderSong(song: Song, offset: number): string {
        <div class="song song-lyrics" aria-label="Letra y acordes">${lyrics}</div>
      </div>
      <div class="song-view song-view-options" data-view-panel="options">
-       <div class="options-nav">
-         <button type="button" class="secondary" data-song-view="player">← Ver canción</button>
-       </div>
        <section class="option-group" aria-label="Tonalidad">
          <h3 class="option-heading">Tonalidad</h3>
          <div class="song-controls" aria-label="Transponer canción">
@@ -282,9 +279,6 @@ export function renderSong(song: Song, offset: number): string {
        </section>
      </div>
      <div class="song-view song-view-editor" data-view-panel="editor">
-       <div class="options-nav">
-         <button type="button" class="secondary" data-song-view="options">← Opciones</button>
-       </div>
        <div class="editor-view-header"><p class="eyebrow">Editar acordes</p><h3>Letra y acordes</h3></div>
        <div id="song-editor-body" data-editor-body>
          <p class="editor-loading">Carga el editor para modificar esta canción.</p>
@@ -295,7 +289,7 @@ export function renderSong(song: Song, offset: number): string {
   <header class="song-header">
     <div class="song-title-block"><p class="eyebrow">${escapeHtml(song.artist)}</p><h2 id="selected-song-title" tabindex="-1">${escapeHtml(song.title)}</h2></div>
     <div class="song-header-actions">
-      <button type="button" class="song-back-button secondary" data-wizard-search aria-label="Ir a la búsqueda">Buscar</button>
+      <button type="button" class="song-back-button secondary" data-wizard-search aria-label="Atrás">←</button>
       <button class="favorite-toggle song-favorite-toggle" type="button" data-favorite-toggle data-song-id="${sourceKey}" data-song-title="${escapeHtml(song.title)}" data-song-artist="${escapeHtml(song.artist)}" aria-label="${song.liked ? "Quitar" : "Añadir"} ${escapeHtml(song.title)} a canciones que me gustan" title="${song.liked ? "Quitar de canciones que me gustan" : "Añadir a canciones que me gustan"}" aria-pressed="${song.liked ? "true" : "false"}"><svg aria-hidden="true" viewBox="0 0 24 24" focusable="false"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78Z"/></svg></button>
     </div>
   </header>
