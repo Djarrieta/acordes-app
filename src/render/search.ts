@@ -3,7 +3,7 @@ import { escapeHtml } from "./html";
 
 function loadButton(song: SongMatch): string {
   const url = escapeHtml(song.url);
-  return `<button class="result-action" type="button" aria-label="Reproducir ${escapeHtml(song.title)}" hx-post="/load" hx-vals='{"url":"${url}"}' hx-target="#song-container" hx-swap="innerHTML">Reproducir</button>`;
+  return `<button class="result-action" type="button" aria-label="Reproducir ${escapeHtml(song.title)}" hx-post="/load" hx-vals='{"url":"${url}"}' hx-target="#song-container" hx-swap="innerHTML" hx-indicator="#song-loader">Reproducir</button>`;
 }
 
 function songListItem(song: SongMatch): string {

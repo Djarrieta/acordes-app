@@ -1,14 +1,15 @@
 import { describe, expect, test } from "bun:test";
 import { homePage } from "../src/routes/home";
 import { renderSong } from "../src/render/song";
+import { makeSong } from "./helpers";
 
 describe("song wizard", () => {
   test("combines search and song selection without a default query", async () => {
     const page = await homePage().text();
 
     expect(page).toContain('aria-label="Pasos de la canción"');
-    expect(page).toContain('href="/public/styles.css?v=playback-layout-1"');
-    expect(page).toContain('src="/public/youtube.js?v=10"');
+    expect(page).toContain('href="/public/styles.css?v=flatten-1"');
+    expect(page).toContain('src="/public/youtube.js?v=12"');
     expect(page).toContain('data-wizard-step="2"');
     expect(page).toContain(">Busca</span>");
     expect(page).toContain(">Reproducir</span>");
@@ -22,16 +23,31 @@ describe("song wizard", () => {
   });
 
   test("renders the selected song title without revealing its source", () => {
-    const song = renderSong({
-      id: "song-id",
-      parsed: {
+    const song = renderSong(
+      makeSong({
         title: "Canción de prueba",
-        artist: "Artista",
-        lines: [{ chords: [{ chord: "C", column: 0 }], lyric: "Letra de prueba" }],
-      },
-      offset: 0,
-      url: "https://acordes.lacuerda.net/artista/cancion.shtml",
-    });
+        lines: [
+          {
+            id: "line-1",
+            position: 0,
+            lyric: "Letra de prueba",
+            isManual: false,
+            chords: [
+              {
+                id: "chord-1",
+                position: 0,
+                name: "C",
+                column: 0,
+                timestampMs: null,
+                timestampSource: "none",
+                confidence: null,
+              },
+            ],
+          },
+        ],
+      }),
+      0,
+    );
 
     expect(song).toContain('<h2 id="selected-song-title" tabindex="-1">Canción de prueba</h2>');
     expect(song).toContain('class="song-back-button secondary" data-wizard-search');
@@ -42,14 +58,15 @@ describe("song wizard", () => {
     expect(song).toContain('aria-pressed="false"');
     expect(song).toContain('data-song-title="Canción de prueba"');
     expect(song).toContain('data-song-artist="Artista"');
-    expect(song).toContain('data-song-id="/artista/cancion.shtml" data-offset="0"');
-    expect(song).toContain('data-youtube-song="/artista/cancion.shtml"');
+    expect(song).toContain('data-song-id="song-id" data-source-key="/artista/cancion.shtml" data-offset="0"');
+    expect(song).toContain('data-youtube-song="song-id"');
     expect(song).toContain('href="https://www.youtube.com/results?search_query=Artista%20Canci%C3%B3n%20de%20prueba"');
     expect(song).toContain('class="song-playback-layout"');
     expect(song).toContain('class="song-aside"');
-    expect(song).toContain('class="song-options" data-song-options open');
-    expect(song).toContain("<details class=\"youtube-section\"");
-    expect(song).not.toContain("<details class=\"youtube-section\" open");
+    expect(song).toContain('class="song-options" data-song-options');
+    expect(song).not.toContain('data-song-options open');
+    expect(song).toContain("<section class=\"youtube-section\"");
+    expect(song).not.toContain("<details class=\"youtube-section\"");
     expect(song).toContain('data-chord-mark-toggle aria-pressed="false"');
     expect(song).toContain('data-chord-index="0"');
     expect(song).toContain('<span class="song-word">');
@@ -69,18 +86,33 @@ describe("song wizard", () => {
   });
 
   test("renders the saved transposition offset in the song card", () => {
-    const song = renderSong({
-      id: "song-id",
-      parsed: {
+    const song = renderSong(
+      makeSong({
         title: "Canción de prueba",
-        artist: "Artista",
-        lines: [{ chords: [{ chord: "C", column: 0 }], lyric: "Letra" }],
-      },
-      offset: 3,
-      url: "https://acordes.lacuerda.net/artista/cancion.shtml",
-    });
+        lines: [
+          {
+            id: "line-1",
+            position: 0,
+            lyric: "Letra",
+            isManual: false,
+            chords: [
+              {
+                id: "chord-1",
+                position: 0,
+                name: "C",
+                column: 0,
+                timestampMs: null,
+                timestampSource: "none",
+                confidence: null,
+              },
+            ],
+          },
+        ],
+      }),
+      3,
+    );
 
-    expect(song).toContain('data-song-id="/artista/cancion.shtml" data-offset="3"');
+    expect(song).toContain('data-song-id="song-id" data-source-key="/artista/cancion.shtml" data-offset="3"');
     expect(song).toContain("Re#");
     expect(song).toContain("+3 semitonos");
   });

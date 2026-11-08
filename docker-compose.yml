@@ -7,6 +7,9 @@ services:
     environment:
       HOST: 0.0.0.0
       PORT: 4173
+      DB_PATH: /app/data/app.sqlite
+    volumes:
+      - ./data:/app/data
     ports:
       - "127.0.0.1:4173:4173"
     logging:

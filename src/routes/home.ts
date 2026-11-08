@@ -7,9 +7,10 @@ export function homePage(): Response {
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="color-scheme" content="light">
   <title>Acordes — transpositor</title>
-  <link rel="stylesheet" href="/public/styles.css?v=playback-layout-1">
+  <link rel="stylesheet" href="/public/styles.css?v=flatten-1">
   <script src="https://unpkg.com/htmx.org@2.0.4"></script>
-  <script src="/public/youtube.js?v=10" defer></script>
+  <script src="/public/youtube.js?v=12" defer></script>
+  <script src="/public/editor.js?v=1" defer></script>
   <script>
     const FAVORITES_KEY = "acordes-liked-songs";
     const LEGACY_TRANSPOSITIONS_KEY = "acordes-song-transpositions";
@@ -31,13 +32,12 @@ export function homePage(): Response {
       }
       if (target?.id !== "song-container" || !target.querySelector(".song-card")) return;
       const card = target.querySelector(".song-card");
-      if (["/load", "/transpose", "/reset"].includes(event.detail.requestConfig?.path)) {
+      const requestPath = event.detail.requestConfig?.path ?? "";
+      if (requestPath === "/load" || requestPath.endsWith("/transpose")) {
         saveTranspositionPreference(card);
       }
       const options = target.querySelector("[data-song-options]");
-      if (options instanceof HTMLDetailsElement) {
-        options.open = !window.matchMedia("(max-width: 899px)").matches;
-      }
+      if (options) options.classList.add("is-open");
       updateWizard(2);
       document.getElementById("search-panel").hidden = true;
       target.hidden = false;
@@ -47,6 +47,9 @@ export function homePage(): Response {
       if (title instanceof HTMLElement) title.focus({ preventScroll: true });
     });
     document.addEventListener("htmx:beforeRequest", (event) => {
+      if (event.detail?.target?.id === "song-container") {
+        document.getElementById("song-loader")?.removeAttribute("hidden");
+      }
       if (event.detail.target?.id === "search-results") {
         if (!document.getElementById("search-query").value.trim()) {
           event.preventDefault();
@@ -55,6 +58,11 @@ export function homePage(): Response {
           return;
         }
         updateWizard(1);
+      }
+    });
+    document.addEventListener("htmx:afterSettle", (event) => {
+      if (event.detail?.target?.id === "song-container") {
+        document.getElementById("song-loader")?.setAttribute("hidden", "");
       }
     });
     document.addEventListener("htmx:configRequest", (event) => {
@@ -191,7 +199,7 @@ export function homePage(): Response {
       }
     }
     function saveTranspositionPreference(card) {
-      const songId = card.getAttribute("data-song-id");
+      const songId = card.getAttribute("data-source-key");
       const offset = Number(card.getAttribute("data-offset"));
       if (!songId || !SONG_ID.test(songId) || !Number.isSafeInteger(offset)) return;
       const song = songPreferences.get(songId) ?? favoriteFromId(songId);
@@ -225,6 +233,7 @@ export function homePage(): Response {
       button.setAttribute("hx-vals", JSON.stringify({ url: song.url }));
       button.setAttribute("hx-target", "#song-container");
       button.setAttribute("hx-swap", "innerHTML");
+      button.setAttribute("hx-indicator", "#song-loader");
       item.append(copy, button);
       return item;
     }
@@ -379,6 +388,7 @@ export function homePage(): Response {
       <div id="search-results" aria-live="polite"></div>
       <p class="visually-hidden" id="favorites-status" role="status" aria-live="polite" hidden></p>
     </section>
+    <div id="song-loader" class="song-loader song-loader--page" role="status" aria-live="polite" hidden><span class="song-loader-spinner" aria-hidden="true"></span><span>Cargando…</span></div>
     <div id="song-container" aria-live="polite" hidden></div>
   </main>
 </body>

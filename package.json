@@ -6,7 +6,9 @@
     "dev": "bun --watch src/index.ts",
     "start": "bun src/index.ts",
     "test": "bun test",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "db:backup": "bun scripts/db-backup.ts",
+    "db:reset": "bun scripts/db-reset.ts"
   },
   "devDependencies": {
     "@types/bun": "latest",

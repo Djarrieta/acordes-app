@@ -148,7 +148,7 @@ export function parseLacuerdaHtml(html: string, sourceUrl: URL): ParsedSong {
   return { ...pageMetadata(html, sourceUrl), lines };
 }
 
-function validateSongUrl(input: string): URL {
+export function parseLacuerdaSongUrl(input: string): URL {
   let url: URL;
   try {
     url = new URL(input);
@@ -156,19 +156,27 @@ function validateSongUrl(input: string): URL {
     throw new LacuerdaParseError("Introduce una URL válida de acordes.lacuerda.net.");
   }
 
+  const pathname = url.pathname.replace(/\/+$/g, "").replace(/\.shtml$/i, "");
   if (
     url.protocol !== "https:" ||
     url.hostname !== "acordes.lacuerda.net" ||
     url.port ||
     url.username ||
     url.password ||
-    !/^\/[^/]+\/[^/]+\.shtml$/i.test(url.pathname)
+    !/^\/[^/]+\/[^/]+$/i.test(pathname)
   ) {
     throw new LacuerdaParseError(
       "La URL debe ser una canción HTTPS de acordes.lacuerda.net.",
     );
   }
+  url.pathname = `${pathname}.shtml`;
+  url.search = "";
+  url.hash = "";
   return url;
+}
+
+function validateSongUrl(input: string): URL {
+  return parseLacuerdaSongUrl(input);
 }
 
 export async function fetchLacuerdaSong(input: string): Promise<ParsedSong> {

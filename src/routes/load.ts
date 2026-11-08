@@ -1,10 +1,6 @@
-import {
-  fetchLacuerdaSong,
-  LacuerdaFetchError,
-  LacuerdaParseError,
-} from "../parser/lacuerda";
+import { LacuerdaFetchError, LacuerdaParseError } from "../parser/lacuerda";
 import { renderError, renderSong } from "../render/song";
-import { createSong } from "../state";
+import { loadSong, validateOffset } from "../songs/songs.service";
 
 export async function loadRoute(request: Request): Promise<Response> {
   let url: string;
@@ -18,17 +14,13 @@ export async function loadRoute(request: Request): Promise<Response> {
     url = urlValue.trim();
     const offsetValue = form.get("offset");
     if (offsetValue !== null) {
-      if (typeof offsetValue !== "string" || !/^-?\d+$/.test(offsetValue)) {
+      const parsedOffset = validateOffset(offsetValue);
+      if (parsedOffset === null) {
         return new Response(renderError("La preferencia de transposición no es válida."), {
           status: 400,
         });
       }
-      offset = Number(offsetValue);
-      if (!Number.isSafeInteger(offset)) {
-        return new Response(renderError("La preferencia de transposición no es válida."), {
-          status: 400,
-        });
-      }
+      offset = parsedOffset;
     }
   } catch {
     return new Response(renderError("No se pudo leer el formulario enviado."), { status: 400 });
@@ -38,8 +30,8 @@ export async function loadRoute(request: Request): Promise<Response> {
   }
 
   try {
-    const parsed = await fetchLacuerdaSong(url);
-    return new Response(renderSong(createSong(parsed, url, offset)), {
+    const { song } = await loadSong(url, offset);
+    return new Response(renderSong(song, offset), {
       headers: { "Content-Type": "text/html; charset=utf-8" },
     });
   } catch (error) {

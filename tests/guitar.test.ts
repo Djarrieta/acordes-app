@@ -2,6 +2,7 @@ import { describe, expect, test } from "bun:test";
 import { renderGuitarChordDiagram } from "../src/guitar/chords";
 import { renderSong } from "../src/render/song";
 import { chordDiagramRoute } from "../src/routes/chord-diagram";
+import { makeSong } from "./helpers";
 
 describe("renderGuitarChordDiagram", () => {
   test("uses known guitar voicings for common and transposed chord names", () => {
@@ -36,16 +37,30 @@ describe("renderGuitarChordDiagram", () => {
   });
 
   test("makes the displayed, transposed chord selectable in the song", () => {
-    const html = renderSong({
-      id: "song-id",
-      offset: 2,
-      url: "https://acordes.lacuerda.net/artista/cancion.shtml",
-      parsed: {
-        title: "Canción",
-        artist: "Artista",
-        lines: [{ chords: [{ chord: "C", column: 0 }], lyric: "Letra" }],
-      },
-    });
+    const html = renderSong(
+      makeSong({
+        lines: [
+          {
+            id: "line-1",
+            position: 0,
+            lyric: "Letra",
+            isManual: false,
+            chords: [
+              {
+                id: "chord-1",
+                position: 0,
+                name: "C",
+                column: 0,
+                timestampMs: null,
+                timestampSource: "none",
+                confidence: null,
+              },
+            ],
+          },
+        ],
+      }),
+      2,
+    );
 
     expect(html).toContain('id="chord-viewer"');
     expect(html).toContain('<dialog id="chord-modal"');
@@ -59,19 +74,36 @@ describe("renderGuitarChordDiagram", () => {
   });
 
   test("assigns an ordered marker target to each chord occurrence", () => {
-    const html = renderSong({
-      id: "song-id",
-      offset: 0,
-      url: "https://acordes.lacuerda.net/artista/cancion.shtml",
-      parsed: {
-        title: "Canción",
-        artist: "Artista",
-        lines: [
-          { chords: [{ chord: "C", column: 0 }, { chord: "G", column: 8 }], lyric: "Primera línea" },
-          { chords: [{ chord: "C", column: 0 }], lyric: "Segunda línea" },
-        ],
-      },
+    const chord = (id: string, name: string, column: number) => ({
+      id,
+      position: 0,
+      name,
+      column,
+      timestampMs: null,
+      timestampSource: "none" as const,
+      confidence: null,
     });
+    const html = renderSong(
+      makeSong({
+        lines: [
+          {
+            id: "line-1",
+            position: 0,
+            lyric: "Primera línea",
+            isManual: false,
+            chords: [chord("chord-1", "C", 0), chord("chord-2", "G", 8)],
+          },
+          {
+            id: "line-2",
+            position: 1,
+            lyric: "Segunda línea",
+            isManual: false,
+            chords: [chord("chord-3", "C", 0)],
+          },
+        ],
+      }),
+      0,
+    );
 
     expect(html).toContain('data-chord-index="0" data-chord-name="Do"');
     expect(html).toContain('data-chord-index="1" data-chord-name="Sol"');
