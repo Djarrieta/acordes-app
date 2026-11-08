@@ -557,45 +557,6 @@ h1 {
   background: #fffefa;
 }
 
-.youtube-summary {
-  display: flex;
-  min-height: 4rem;
-  align-items: center;
-  justify-content: space-between;
-  gap: 1rem;
-  cursor: pointer;
-  list-style: none;
-  padding: 0.75rem 1.5rem;
-}
-
-.youtube-summary::-webkit-details-marker {
-  display: none;
-}
-
-.youtube-summary::after {
-  color: #52705c;
-  content: "+";
-  font-size: 1.35rem;
-  font-weight: 700;
-}
-
-.youtube-section[open] .youtube-summary::after {
-  content: "−";
-}
-
-.youtube-summary > span:first-child {
-  display: grid;
-  gap: 0.2rem;
-}
-
-.youtube-summary .eyebrow {
-  margin: 0;
-}
-
-.youtube-summary strong {
-  font-size: 1rem;
-}
-
 .youtube-summary-state {
   margin-left: auto;
   color: #66625a;
@@ -1296,31 +1257,19 @@ body.is-song-view .youtube-section {
   border-top: 1px solid #ece8de;
 }
 
-body.is-song-view .youtube-summary {
-  min-height: 2.4rem;
-  padding: 0.35rem 0.8rem;
-}
-
-body.is-song-view .youtube-summary > span:first-child {
-  display: flex;
-  align-items: baseline;
-  gap: 0.45rem;
-}
-
-body.is-song-view .youtube-summary .eyebrow {
-  font-size: 0.65rem;
-}
-
-body.is-song-view .youtube-summary strong {
-  font-size: 0.85rem;
+body.is-song-view .song-aside > * {
+  flex-shrink: 0;
 }
 
 body.is-song-view .youtube-section .youtube-panel {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  align-items: center;
-  gap: 0.35rem 0.65rem;
-  padding: 0.45rem 0.8rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 0.5rem 0.8rem 0.6rem;
+}
+
+body.is-song-view .youtube-panel > * {
+  margin: 0;
 }
 
 body.is-song-view .song-card.is-playing .song-options {
@@ -1332,8 +1281,10 @@ body.is-song-view .song-lyrics {
 }
 
 body.is-song-view .youtube-header {
-  grid-column: 1 / -1;
-  margin: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
 }
 
 body.is-song-view .youtube-header p,
@@ -1342,11 +1293,7 @@ body.is-song-view .youtube-help {
 }
 
 body.is-song-view .youtube-link-form {
-  grid-column: 1;
-  grid-row: 2;
-  grid-template-columns: minmax(0, 1fr);
-  gap: 0;
-  margin: 0;
+  gap: 0.3rem;
 }
 
 body.is-song-view .youtube-link-form label {
@@ -1354,41 +1301,40 @@ body.is-song-view .youtube-link-form label {
 }
 
 body.is-song-view .youtube-link-row {
+  flex-direction: row;
   gap: 0.35rem;
 }
 
-body.is-song-view .youtube-link-row input,
-body.is-song-view .youtube-link-row button {
+body.is-song-view .youtube-link-row input {
   padding: 0.45rem 0.6rem;
 }
 
 body.is-song-view .youtube-link-row button {
+  width: auto;
+  padding: 0.45rem 0.6rem;
   font-size: 0.75rem;
 }
 
-body.is-song-view .youtube-section.has-video .youtube-link-form {
-  display: none;
-}
-
+body.is-song-view .youtube-section.has-video .youtube-link-form,
 body.is-song-view .youtube-section.has-video .youtube-header {
   display: none;
 }
 
-body.is-song-view .youtube-unlink {
-  grid-column: 1;
-  grid-row: 2;
-  justify-self: start;
-  margin: 0;
+body.is-song-view .youtube-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+body.is-song-view .youtube-actions button,
+body.is-song-view .youtube-unlink,
+body.is-song-view .chord-mark-toggle {
   padding: 0.45rem 0.6rem;
   font-size: 0.75rem;
 }
 
-body.is-song-view .chord-mark-toggle {
-  grid-column: 2;
-  grid-row: 2;
-  margin: 0;
-  padding: 0.45rem 0.6rem;
-  font-size: 0.75rem;
+body.is-song-view .youtube-unlink {
+  align-self: flex-start;
 }
 
 body.is-song-view .song-lyrics {
@@ -1538,10 +1484,6 @@ body.is-song-view .song-lyrics {
     padding-inline: 0;
   }
 
-  .youtube-summary {
-    padding-inline: 1rem;
-  }
-
   .youtube-panel {
     padding-inline: 1rem;
   }
@@ -1621,55 +1563,16 @@ body.is-song-view .song-lyrics {
     margin-inline: auto;
   }
 
-body.is-song-view .youtube-section .youtube-panel {
-    grid-template-columns: minmax(0, 1fr);
-  }
-
-  body.is-song-view .youtube-unlink {
-    grid-column: 1;
-    grid-row: auto;
-  }
-
-  body.is-song-view .chord-mark-toggle {
-    grid-column: 1;
-    grid-row: auto;
-    justify-self: start;
-  }
-
-  body.is-song-view .youtube-link-form {
-    grid-column: 1;
-    grid-row: auto;
-  }
-
-  body.is-song-view .youtube-link-row {
-    flex-direction: row;
-  }
-
-  body.is-song-view .youtube-link-row button {
-    width: auto;
-  }
-
-  body.is-song-view .youtube-section.has-video .youtube-panel {
-    grid-template-columns: auto auto;
-    justify-content: center;
-  }
-
-  body.is-song-view .youtube-section.has-video .youtube-unlink,
-  body.is-song-view .youtube-section.has-video .chord-mark-toggle {
-    grid-row: 1;
-  }
-
-  body.is-song-view .youtube-section.has-video .chord-mark-toggle {
-    grid-column: 2;
-  }
-
-  body.is-song-view .youtube-section.has-video .youtube-unlink {
-    grid-column: 1;
-  }
 }
 
 @media (max-width: 899px) {
+  body.is-song-view .song-aside {
+    flex: 0 1 auto;
+    max-height: 50dvh;
+  }
+
   body.is-song-view .song-lyrics {
+    flex: 1 1 0;
     overflow-x: hidden;
     overflow-y: auto;
     padding: 0.85rem 0.9rem 1.1rem;
@@ -1970,6 +1873,17 @@ button.danger:hover {
   margin-top: 1rem;
 }
 
+.video-candidates summary {
+  cursor: pointer;
+  color: #24543c;
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+.video-candidates[open] summary {
+  margin-bottom: 0.25rem;
+}
+
 .video-candidate-list {
   display: grid;
   gap: 0.6rem;
@@ -2052,13 +1966,6 @@ button.danger:hover {
   animation: search-spin 700ms linear infinite;
 }
 
-.song-options-header {
-  display: flex;
-  align-items: center;
-  padding: 0.65rem 1.5rem;
-  font-weight: 700;
-}
-
 .youtube-section-header {
   display: flex;
   align-items: center;
@@ -2081,10 +1988,6 @@ button.danger:hover {
   font-size: 1rem;
 }
 
-body.is-song-view .song-options-header {
-  padding: 0.35rem 0.8rem;
-}
-
 body.is-song-view .youtube-section-header {
   padding: 0.35rem 0.8rem;
 }
@@ -2103,18 +2006,3 @@ body.is-song-view .youtube-section-header strong {
   font-size: 0.85rem;
 }
 
-body.is-song-view .youtube-section .youtube-panel {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  align-items: center;
-  gap: 0.35rem 0.65rem;
-  padding: 0.45rem 0.8rem;
-}
-
-body.is-song-view .youtube-section.has-video .youtube-link-form {
-  display: none;
-}
-
-body.is-song-view .youtube-section.has-video .youtube-header {
-  display: none;
-}

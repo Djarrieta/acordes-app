@@ -7,13 +7,13 @@ export function homePage(): Response {
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="color-scheme" content="light">
   <title>Acordes — transpositor</title>
-  <link rel="stylesheet" href="/public/styles.css?v=collapsible-1">
+  <link rel="icon" href="data:,">
+  <link rel="stylesheet" href="/public/styles.css?v=playback-2">
   <script src="https://unpkg.com/htmx.org@2.0.4"></script>
-  <script src="/public/youtube.js?v=13" defer></script>
+  <script src="/public/youtube.js?v=14" defer></script>
   <script src="/public/editor.js?v=1" defer></script>
   <script>
     const FAVORITES_KEY = "acordes-liked-songs";
-    const LEGACY_TRANSPOSITIONS_KEY = "acordes-song-transpositions";
     const SONG_ID = /^\\/([a-z0-9_-]+)\\/([a-z0-9_.-]+)\\.shtml$/i;
     let songPreferences = new Map();
     let onlyFavorites = false;
@@ -127,38 +127,24 @@ export function homePage(): Response {
         status.hidden = false;
       }
     }
-    function favoriteFromId(id, title = "", artist = "") {
-      if (typeof id !== "string" || !SONG_ID.test(id)) return null;
-      const [, artistSlug, fileSlug] = id.match(SONG_ID) || [];
-      return {
-        id,
-        title: title || fileSlug.replace(/\.shtml$/i, "").replace(/[_-]+/g, " "),
-        artist: artist || artistSlug.replace(/[_-]+/g, " "),
-        url: "https://acordes.lacuerda.net" + id,
-        liked: true,
-        legacy: !title || !artist
-      };
+    function songPreference(id, title, artist) {
+      if (typeof id !== "string" || !SONG_ID.test(id) || !title || !artist) return null;
+      return { id, title, artist, url: "https://acordes.lacuerda.net" + id, liked: false };
     }
-    function readFavoriteSongs() {
+    function readSongPreferences() {
       try {
         const stored = JSON.parse(localStorage.getItem(FAVORITES_KEY) || "[]");
         if (!Array.isArray(stored)) {
-          throw new TypeError("El formato de canciones favoritas no es válido.");
+          throw new TypeError("El formato de preferencias de canciones no es válido.");
         }
         const songs = new Map();
-        stored.forEach((value) => {
-          const song = typeof value === "string"
-            ? favoriteFromId(value)
-            : value && typeof value === "object"
-              ? favoriteFromId(value.id, value.title, value.artist)
-              : null;
-          if (!song) return;
-          if (value && typeof value === "object") {
-            song.liked = value.liked !== false;
-            if (Number.isSafeInteger(value.offset) && value.offset !== 0) song.offset = value.offset;
-          }
+        for (const value of stored) {
+          const song = songPreference(value?.id, value?.title, value?.artist);
+          if (!song) continue;
+          song.liked = value.liked !== false;
+          if (Number.isSafeInteger(value.offset) && value.offset !== 0) song.offset = value.offset;
           if (song.liked || song.offset !== undefined) songs.set(song.id, song);
-        });
+        }
         return songs;
       } catch (error) {
         console.error("No se pudieron cargar las preferencias de canciones:", error);
@@ -176,35 +162,13 @@ export function homePage(): Response {
         return false;
       }
     }
-    function migrateTranspositionPreferences() {
-      try {
-        const raw = localStorage.getItem(LEGACY_TRANSPOSITIONS_KEY);
-        if (raw === null) return;
-        const stored = JSON.parse(raw);
-        if (!stored || typeof stored !== "object" || Array.isArray(stored)) {
-          throw new TypeError("El formato de preferencias de transposición no es válido.");
-        }
-        Object.entries(stored).forEach(([songId, offset]) => {
-          if (SONG_ID.test(songId) && typeof offset === "number" && Number.isSafeInteger(offset)) {
-            const song = songPreferences.get(songId) ?? favoriteFromId(songId);
-            if (!song) return;
-            if (!songPreferences.has(songId)) song.liked = false;
-            song.offset = offset === 0 ? undefined : offset;
-            if (song.liked || song.offset !== undefined) songPreferences.set(songId, song);
-            else songPreferences.delete(songId);
-          }
-        });
-        if (persistFavoriteSongs()) localStorage.removeItem(LEGACY_TRANSPOSITIONS_KEY);
-      } catch (error) {
-        console.error("No se pudieron cargar las preferencias de transposición:", error);
-        showFavoriteStorageError("No se pudieron cargar las preferencias de transposición desde este navegador.");
-      }
-    }
     function saveTranspositionPreference(card) {
       const songId = card.getAttribute("data-source-key");
       const offset = Number(card.getAttribute("data-offset"));
-      if (!songId || !SONG_ID.test(songId) || !Number.isSafeInteger(offset)) return;
-      const song = songPreferences.get(songId) ?? favoriteFromId(songId);
+      if (!songId || !Number.isSafeInteger(offset)) return;
+      const toggle = card.querySelector("[data-favorite-toggle]");
+      const song = songPreferences.get(songId)
+        ?? songPreference(songId, toggle?.getAttribute("data-song-title"), toggle?.getAttribute("data-song-artist"));
       if (!song) return;
       if (!songPreferences.has(songId)) song.liked = false;
       song.offset = offset === 0 ? undefined : offset;
@@ -261,39 +225,6 @@ export function homePage(): Response {
       results.replaceChildren(section);
       htmx.process(section);
     }
-    async function hydrateLegacyFavorites() {
-      const unresolved = [...songPreferences.values()].filter((song) => song.liked && song.legacy);
-      const artistSlugs = new Set(unresolved.map((song) => song.id.split("/")[1]));
-      let updated = false;
-      for (const slug of artistSlugs) {
-        try {
-          const response = await fetch("/artist?slug=" + encodeURIComponent(slug));
-          if (!response.ok) throw new Error("HTTP " + response.status);
-          const parsed = new DOMParser().parseFromString(await response.text(), "text/html");
-          parsed.querySelectorAll(".result-item[data-song-id]").forEach((item) => {
-            const id = item.getAttribute("data-song-id");
-            const saved = songPreferences.get(id);
-            if (!saved) return;
-            const song = {
-              ...saved,
-              ...favoriteFromId(id, item.getAttribute("data-song-title"), item.getAttribute("data-song-artist")),
-              offset: saved.offset,
-              liked: saved.liked,
-            };
-            if (song) {
-              song.legacy = false;
-              songPreferences.set(id, song);
-              updated = true;
-            }
-          });
-        } catch (error) {
-          console.error("No se pudieron actualizar los datos de canciones favoritas:", error);
-          showFavoriteStorageError("No se pudieron actualizar los datos de algunas canciones favoritas.");
-        }
-      }
-      if (updated) persistFavoriteSongs();
-      renderFavoriteSongs();
-    }
     function applyFavoriteState() {
       const items = document.querySelectorAll("#search-results .result-item[data-song-id]");
       items.forEach((item) => {
@@ -326,13 +257,12 @@ export function homePage(): Response {
         existing.liked = false;
         if (existing.offset === undefined) songPreferences.delete(songId);
       } else {
-        const song = existing ?? favoriteFromId(
-            songId,
-            button.getAttribute("data-song-title"),
-            button.getAttribute("data-song-artist"),
-          );
+        const song = existing ?? songPreference(
+          songId,
+          button.getAttribute("data-song-title"),
+          button.getAttribute("data-song-artist"),
+        );
         if (song) {
-          song.legacy = false;
           song.liked = true;
           songPreferences.set(songId, song);
         }
@@ -344,19 +274,17 @@ export function homePage(): Response {
     }
     window.addEventListener("storage", (event) => {
       if (event.key === FAVORITES_KEY) {
-        songPreferences = readFavoriteSongs();
+        songPreferences = readSongPreferences();
         onlyFavorites = [...songPreferences.values()].some((song) => song.liked);
         applyFavoriteState();
         if (!document.getElementById("search-query").value.trim()) renderFavoriteSongs();
       }
     });
     document.addEventListener("DOMContentLoaded", () => {
-      songPreferences = readFavoriteSongs();
-      migrateTranspositionPreferences();
+      songPreferences = readSongPreferences();
       onlyFavorites = [...songPreferences.values()].some((song) => song.liked);
       applyFavoriteState();
       renderFavoriteSongs();
-      void hydrateLegacyFavorites();
     });
   </script>
 </head>

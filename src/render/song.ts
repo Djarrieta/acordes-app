@@ -163,7 +163,7 @@ function renderVideoPanel(song: Song, searchQuery: string): string {
       <button type="button" class="youtube-unlink secondary" data-video-unlink>Quitar video</button>`
     : "";
 
-  return `<section class="youtube-section" data-youtube-song="${escapeHtml(song.id)}" data-video-id="${video ? escapeHtml(video.id) : ""}" data-video-url="${video ? escapeHtml(video.url) : ""}" data-video-status="${song.videoStatus}" data-timestamps-status="${song.timestampsStatus}">
+  return `<section class="youtube-section${video ? " has-video" : ""}" data-youtube-song="${escapeHtml(song.id)}" data-video-id="${video ? escapeHtml(video.id) : ""}" data-video-url="${video ? escapeHtml(video.url) : ""}" data-video-status="${song.videoStatus}" data-timestamps-status="${song.timestampsStatus}">
         <div class="youtube-section-header">
           <span><span class="eyebrow">Acompañamiento</span><strong>YouTube</strong></span>
           <span class="youtube-summary-state" data-youtube-summary-state>${busy ? "Cargando…" : escapeHtml(VIDEO_STATUS_LABELS[song.videoStatus])}</span>

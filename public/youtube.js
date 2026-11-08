@@ -14,50 +14,6 @@ let highlightedChordIndex = null;
 let chordDiagramRequest = 0;
 let requestedAccompanimentChord = "";
 const chordDiagramCache = new Map();
-const LEGACY_PREFERENCES_KEY = "acordes-youtube-videos";
-const migrationChecked = new Set();
-
-function legacyPreferences() {
-  try {
-    const stored = JSON.parse(localStorage.getItem(LEGACY_PREFERENCES_KEY) || "{}");
-    return stored && typeof stored === "object" && !Array.isArray(stored) ? stored : {};
-  } catch (error) {
-    console.error("No se pudieron leer los videos guardados en este navegador:", error);
-    return {};
-  }
-}
-
-function offerLegacyMigration(card, section) {
-  if (!card || card.dataset.hasVideo !== "false") return;
-  const id = card.dataset.songId;
-  const sourceKey = card.dataset.sourceKey;
-  if (!id || !sourceKey || migrationChecked.has(id)) return;
-  const stored = legacyPreferences();
-  const legacy = stored[sourceKey];
-  if (!legacy || typeof legacy !== "object" || !VIDEO_ID_PATTERN.test(legacy.videoId)) return;
-  migrationChecked.add(id);
-  const chords = [...card.querySelectorAll("[data-chord-id]")];
-  const marks = Array.isArray(legacy.chordTimestamps) ? legacy.chordTimestamps : [];
-  void (async () => {
-    try {
-      const linked = await linkVideo(section, legacy.videoId, legacy.url || "");
-      if (!linked) return;
-      for (const [index, chord] of chords.entries()) {
-        const seconds = marks[index];
-        if (!Number.isSafeInteger(seconds) || seconds < 0 || !chord.dataset.chordId) continue;
-        await postForm(
-          `/songs/${encodeURIComponent(id)}/chords/${encodeURIComponent(chord.dataset.chordId)}/timestamp`,
-          { ms: String(seconds * 1000) },
-        );
-      }
-      delete stored[sourceKey];
-      localStorage.setItem(LEGACY_PREFERENCES_KEY, JSON.stringify(stored));
-      reloadPlayer();
-    } catch (error) {
-      console.error("No se pudieron importar los datos guardados:", error);
-    }
-  })();
-}
 
 function songCard(section) {
   return section?.closest(".song-card") ?? null;
@@ -464,7 +420,6 @@ function initializeSection(section) {
   if (host) host.hidden = !hasVideo;
   updatePlaybackButton(section);
   updateProgress(section);
-  offerLegacyMigration(card, section);
 
   if (!hasVideo) {
     destroyPlayer(section);
