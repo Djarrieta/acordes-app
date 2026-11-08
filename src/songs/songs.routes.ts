@@ -18,6 +18,7 @@ import {
   listCandidates,
   recordEdit,
   refreshNonManualLines,
+  setPreferredOffset,
   setChordTimestamp,
   setLinePosition,
   setVideo,
@@ -151,6 +152,7 @@ export async function handleSongsRoutes(
     if (!song) return missingSong();
     const currentOffset = validateOffset(form.get("offset") as string | null) ?? 0;
     if (form.get("reset") !== null) {
+      setPreferredOffset(db, songId, 0);
       return html(renderSong(song, 0));
     }
     const deltaValue = form.get("delta");
@@ -158,7 +160,9 @@ export async function handleSongsRoutes(
     if (!Number.isInteger(delta) || ![-2, -1, 1, 2].includes(delta)) {
       return badRequest("El intervalo de transposición no es válido.");
     }
-    return html(renderSong(song, currentOffset + delta));
+    const nextOffset = currentOffset + delta;
+    setPreferredOffset(db, songId, nextOffset);
+    return html(renderSong(song, nextOffset));
   }
 
   if (suffix === "/timestamps/auto" || suffix === "/timestamps/retry") {

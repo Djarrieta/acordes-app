@@ -229,7 +229,7 @@ export function renderSong(song: Song, offset: number): string {
     <div class="song-header-actions">
       <button type="button" class="song-back-button secondary" data-wizard-search aria-label="Volver a la búsqueda">← Volver</button>
       <button type="button" class="secondary" data-song-edit aria-label="Editar letra y acordes" hx-get="/songs/${id}/edit" hx-target="#song-editor-body" hx-swap="innerHTML">Editar</button>
-      <button class="favorite-toggle song-favorite-toggle" type="button" data-favorite-toggle data-song-id="${sourceKey}" data-song-title="${escapeHtml(song.title)}" data-song-artist="${escapeHtml(song.artist)}" aria-label="Añadir ${escapeHtml(song.title)} a canciones que me gustan" title="Añadir a canciones que me gustan" aria-pressed="false"><svg aria-hidden="true" viewBox="0 0 24 24" focusable="false"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78Z"/></svg></button>
+      <button class="favorite-toggle song-favorite-toggle" type="button" data-favorite-toggle data-song-id="${sourceKey}" data-song-title="${escapeHtml(song.title)}" data-song-artist="${escapeHtml(song.artist)}" aria-label="${song.liked ? "Quitar" : "Añadir"} ${escapeHtml(song.title)} a canciones que me gustan" title="${song.liked ? "Quitar de canciones que me gustan" : "Añadir a canciones que me gustan"}" aria-pressed="${song.liked ? "true" : "false"}"><svg aria-hidden="true" viewBox="0 0 24 24" focusable="false"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78Z"/></svg></button>
     </div>
   </header>
   <div class="song-playback-layout">

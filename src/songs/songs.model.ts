@@ -52,6 +52,9 @@ export type Song = {
   timestampsStatus: TimestampsStatus;
   timestampsError: string | null;
   timestampsAttempts: number;
+  liked: boolean;
+  likedAt: string | null;
+  preferredOffset: number;
   version: number;
   lines: SongLine[];
   createdAt: string;

@@ -9,6 +9,11 @@ import {
   deleteLine,
   findSongIdBySourceKey,
   getSong,
+  isSongLiked,
+  listLikedSongs,
+  listPreferences,
+  setPreferredOffset,
+  setSongLike,
   listCandidates,
   refreshNonManualLines,
   replaceCandidates,
@@ -158,5 +163,33 @@ describe("song repository", () => {
     const updated = getSong(db, song.id)!;
     expect(updated.video?.id).toBe("abcdefghijk");
     expect(updated.videoStatus).toBe("ready");
+  });
+
+  test("stores likes and preferred offsets in the database", () => {
+    const song = seed();
+
+    expect(isSongLiked(db, song.id)).toBe(false);
+    expect(listLikedSongs(db)).toHaveLength(0);
+
+    expect(setSongLike(db, song.id, true)).toBe(true);
+    expect(isSongLiked(db, song.id)).toBe(true);
+    setPreferredOffset(db, song.id, 2);
+
+    const updated = getSong(db, song.id)!;
+    expect(updated.liked).toBe(true);
+    expect(updated.likedAt).toBeString();
+    expect(updated.preferredOffset).toBe(2);
+
+    const liked = listLikedSongs(db);
+    expect(liked).toHaveLength(1);
+    expect(liked[0]!.sourceKey).toBe("/artista/cancion.shtml");
+
+    const preferences = listPreferences(db);
+    expect(preferences.liked).toEqual(["/artista/cancion.shtml"]);
+    expect(preferences.offsets).toEqual({ "/artista/cancion.shtml": 2 });
+
+    setSongLike(db, song.id, false);
+    expect(listLikedSongs(db)).toHaveLength(0);
+    expect(setSongLike(db, "missing-id", true)).toBe(false);
   });
 });

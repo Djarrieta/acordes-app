@@ -56,6 +56,20 @@ describe("song routes", () => {
     expect(html).not.toContain("https://acordes.lacuerda.net/artista/cancion.shtml");
   });
 
+  test("persists the transposition offset in the database", async () => {
+    const response = await route(
+      request(`/songs/${song.id}/transpose`, "POST", { offset: "0", delta: "2" }),
+    );
+    const html = await response.text();
+
+    expect(response.status).toBe(200);
+    expect(html).toContain("+2 semitonos");
+    expect(getSong(db, song.id)!.preferredOffset).toBe(2);
+
+    await route(request(`/songs/${song.id}/transpose`, "POST", { offset: "2", reset: "1" }));
+    expect(getSong(db, song.id)!.preferredOffset).toBe(0);
+  });
+
   test("returns the status payload for polling", async () => {
     const response = await route(request(`/songs/${song.id}/status`));
     const payload = (await response.json()) as { id: string; version: number };

@@ -3,6 +3,7 @@ import { getDb } from "./db";
 import { methodNotAllowed, notFound } from "./core/http";
 import { homePage } from "./routes/home";
 import { chordDiagramRoute } from "./routes/chord-diagram";
+import { favoritesRoute } from "./routes/favorites";
 import { loadRoute } from "./routes/load";
 import { artistRoute, searchRoute } from "./routes/search";
 import { youtubeVideoIdRoute } from "./routes/youtube";
@@ -31,6 +32,9 @@ Bun.serve({
     }
     if (method === "GET" && pathname === "/artist") {
       return artistRoute(request);
+    }
+    if (pathname === "/favorites" || pathname === "/favorites/state" || pathname === "/favorites/toggle") {
+      return favoritesRoute(request, url);
     }
     if (pathname === "/chord-diagram") {
       if (method === "GET") return chordDiagramRoute(request);

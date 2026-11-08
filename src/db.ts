@@ -4,6 +4,22 @@ import { dirname } from "node:path";
 import { config } from "./config";
 import { SCHEMA_SQL, SCHEMA_VERSION } from "./songs/songs.schema";
 
+function migrate(db: Database): void {
+  const columns = (db.query("PRAGMA table_info(songs)").all() as { name: string }[]).map(
+    (column) => column.name,
+  );
+  const additions: [string, string][] = [
+    ["liked", "INTEGER NOT NULL DEFAULT 0"],
+    ["liked_at", "TEXT"],
+    ["preferred_offset", "INTEGER NOT NULL DEFAULT 0"],
+  ];
+  for (const [name, definition] of additions) {
+    if (!columns.includes(name)) {
+      db.exec(`ALTER TABLE songs ADD COLUMN ${name} ${definition}`);
+    }
+  }
+}
+
 let instance: Database | null = null;
 
 export function openDatabase(path: string = config.dbPath): Database {
@@ -16,6 +32,7 @@ export function openDatabase(path: string = config.dbPath): Database {
   db.exec("PRAGMA busy_timeout = 5000;");
   db.exec("PRAGMA foreign_keys = ON;");
   db.exec(SCHEMA_SQL);
+  migrate(db);
   const row = db.query("PRAGMA user_version").get() as { user_version?: number } | null;
   if ((row?.user_version ?? 0) < SCHEMA_VERSION) {
     db.exec(`PRAGMA user_version = ${SCHEMA_VERSION}`);

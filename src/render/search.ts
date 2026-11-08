@@ -58,6 +58,16 @@ export function renderArtistSongs(result: ArtistSongs): string {
   </section>`;
 }
 
+export function renderFavorites(songs: SongMatch[]): string {
+  if (songs.length === 0) {
+    return `<p class="empty">Todavía no tienes canciones marcadas como favoritas. Abre una canción y pulsa el corazón.</p>`;
+  }
+  return `<section class="search-results" aria-label="Canciones que me gustan">
+    <p class="search-summary"><strong>${songs.length} ${songs.length === 1 ? "canción que te gusta" : "canciones que te gustan"}</strong></p>
+    <ul class="result-list">${songs.map(songListItem).join("")}</ul>
+  </section>`;
+}
+
 export function renderSearchPrompt(): string {
   return `<p class="empty">Escribe el nombre de una canción o de un artista para buscar.</p>`;
 }

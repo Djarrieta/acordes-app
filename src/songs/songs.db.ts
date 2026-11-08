@@ -31,6 +31,9 @@ type SongRow = {
   timestamps_status: TimestampsStatus;
   timestamps_error: string | null;
   timestamps_attempts: number;
+  liked: number;
+  liked_at: string | null;
+  preferred_offset: number;
   version: number;
   created_at: string;
   updated_at: string;
@@ -102,6 +105,9 @@ function mapSong(row: SongRow, lines: SongLine[]): Song {
     timestampsStatus: row.timestamps_status,
     timestampsError: row.timestamps_error,
     timestampsAttempts: row.timestamps_attempts,
+    liked: row.liked === 1,
+    likedAt: row.liked_at,
+    preferredOffset: row.preferred_offset ?? 0,
     version: row.version,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
@@ -749,4 +755,59 @@ export function refreshNonManualLines(
     recalcSongTimestampSource(db, songId);
   });
   return { updated, preserved };
+}
+
+export function isSongLiked(db: Database, songId: string): boolean {
+  const row = db.query("SELECT liked FROM songs WHERE id = ?").get(songId) as {
+    liked: number;
+  } | null;
+  return row?.liked === 1;
+}
+
+export function setSongLike(db: Database, songId: string, liked: boolean): boolean {
+  const result = db
+    .query("UPDATE songs SET liked = ?, liked_at = ?, updated_at = ? WHERE id = ?")
+    .run(liked ? 1 : 0, liked ? now() : null, now(), songId);
+  return result.changes > 0;
+}
+
+export function setPreferredOffset(db: Database, songId: string, offset: number): void {
+  db.query("UPDATE songs SET preferred_offset = ?, updated_at = ? WHERE id = ?").run(
+    offset,
+    now(),
+    songId,
+  );
+}
+
+export function listLikedSongs(
+  db: Database,
+): { title: string; artist: string; url: string; sourceKey: string }[] {
+  const rows = db
+    .query(
+      "SELECT title, artist, source_url, source_key FROM songs WHERE liked = 1 ORDER BY liked_at ASC",
+    )
+    .all() as { title: string; artist: string; source_url: string; source_key: string }[];
+  return rows.map((row) => ({
+    title: row.title,
+    artist: row.artist,
+    url: row.source_url,
+    sourceKey: row.source_key,
+  }));
+}
+
+export function listPreferences(db: Database): {
+  liked: string[];
+  offsets: Record<string, number>;
+} {
+  const rows = db
+    .query("SELECT source_key, preferred_offset FROM songs")
+    .all() as { source_key: string; preferred_offset: number }[];
+  const likedRows = db.query("SELECT source_key FROM songs WHERE liked = 1").all() as {
+    source_key: string;
+  }[];
+  const offsets: Record<string, number> = {};
+  for (const row of rows) {
+    if (row.preferred_offset !== 0) offsets[row.source_key] = row.preferred_offset;
+  }
+  return { liked: likedRows.map((row) => row.source_key), offsets };
 }

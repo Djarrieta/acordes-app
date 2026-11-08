@@ -4,7 +4,7 @@ import { loadSong, validateOffset } from "../songs/songs.service";
 
 export async function loadRoute(request: Request): Promise<Response> {
   let url: string;
-  let offset = 0;
+  let offset: number | null = null;
   try {
     const form = await request.formData();
     const urlValue = form.get("url");
@@ -21,8 +21,7 @@ export async function loadRoute(request: Request): Promise<Response> {
         });
       }
       offset = parsedOffset;
-    }
-  } catch {
+    }  } catch {
     return new Response(renderError("No se pudo leer el formulario enviado."), { status: 400 });
   }
   if (!url) {
@@ -30,8 +29,9 @@ export async function loadRoute(request: Request): Promise<Response> {
   }
 
   try {
-    const { song } = await loadSong(url, offset);
-    return new Response(renderSong(song, offset), {
+    const { song } = await loadSong(url, offset ?? 0);
+    const renderOffset = offset ?? song.preferredOffset;
+    return new Response(renderSong(song, renderOffset), {
       headers: { "Content-Type": "text/html; charset=utf-8" },
     });
   } catch (error) {
