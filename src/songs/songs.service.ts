@@ -48,7 +48,8 @@ export async function loadSong(
     });
     recordEdit(db, song.id, "song.import", { sourceKey });
     enqueueVideoSearch(song.id, db);
-    return { song, created: true };
+    // La búsqueda de video cambia el estado en la base; se relee para que la vista muestre "buscando".
+    return { song: getSong(db, song.id) ?? song, created: true };
   } catch (error) {
     const racedId = findSongIdBySourceKey(db, sourceKey);
     if (racedId) {
