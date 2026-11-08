@@ -8,7 +8,7 @@ describe("song wizard", () => {
     const page = await homePage().text();
 
     expect(page).toContain('aria-label="Pasos de la canción"');
-    expect(page).toContain('href="/public/styles.css?v=playback-6"');
+    expect(page).toContain('href="/public/styles.css?v=playback-7"');
     expect(page).toContain('src="/public/youtube.js?v=18"');
     expect(page).toContain('data-wizard-step="2"');
     expect(page).toContain(">Busca</span>");
