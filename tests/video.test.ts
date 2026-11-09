@@ -9,6 +9,7 @@ import {
   waitForEnrichment,
 } from "../src/songs/enrichment/enrichment.service";
 import { parseJson3 } from "../src/songs/enrichment/youtube.transcript";
+import { resetAudioProviders, setAudioProvidersForTests } from "../src/audio/audio.service";
 import type { Song } from "../src/songs/songs.model";
 
 let db: Database;
@@ -28,11 +29,14 @@ beforeEach(() => {
   db = openDatabase(":memory:");
   setDb(db);
   resetEnrichmentProviders();
+  resetAudioProviders();
+  setAudioProvidersForTests({ download: async () => null });
   song = seed();
 });
 
 afterEach(() => {
   resetEnrichmentProviders();
+  resetAudioProviders();
   setDb(null);
   db.close();
 });

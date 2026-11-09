@@ -20,7 +20,7 @@ Abre <http://localhost:4173>. Para ejecutar el servidor sin modo de desarrollo:
 bun run start
 ```
 
-El servidor lee `HOST`, `PORT`, `DB_PATH`, `VIDEO_SEARCH_ENABLED`, `VIDEO_MAX_CANDIDATES`, `TIMESTAMPS_ENABLED`, `TIMESTAMPS_MAX_ATTEMPTS` y `YTDLP_PATH` del entorno; los valores de ejemplo están en `.env.example`. La base SQLite se crea en `data/app.sqlite` por defecto.
+El servidor lee `HOST`, `PORT`, `DB_PATH`, `VIDEO_SEARCH_ENABLED`, `VIDEO_MAX_CANDIDATES`, `TIMESTAMPS_ENABLED`, `TIMESTAMPS_MAX_ATTEMPTS`, `YTDLP_PATH`, `FFMPEG_PATH`, `AUDIO_TRANSPOSE_ENABLED`, `AUDIO_MAX_ATTEMPTS`, `AUDIO_MAX_BYTES`, `AUDIO_MAX_TOTAL_BYTES` y `AUDIO_DIR` del entorno; los valores de ejemplo están en `.env.example`. La base SQLite se crea en `data/app.sqlite` por defecto. El audio transponible se descarga con `yt-dlp` a `data/audio/` y se procesa en el navegador (Rubber Band WASM); si está desactivado o falla, se usa el video de YouTube como antes.
 
 > **Entorno de producción (POC):** la aplicación desplegada vive en <https://acordes.ingeniar.online/> (Docker + Cloudflare Tunnel). El desarrollo se hace por SSH sobre el servidor, así que `localhost` no es el entorno de validación: cada cambio se publica reconstruyendo el contenedor y se comprueba en esa URL. No hay separación entre dev y prod; todo es producción y, al ser una POC, está permitido romperla durante la iteración.
 

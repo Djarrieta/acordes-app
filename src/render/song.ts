@@ -1,4 +1,5 @@
 import { transposeChord } from "../transpose/chords";
+import type { SongAudio } from "../audio/audio.model";
 import type { Song, SongChord, SongLine } from "../songs/songs.model";
 import { escapeHtml } from "./html";
 
@@ -201,10 +202,18 @@ function renderVideoPanel(song: Song, searchQuery: string): string {
       </section>`;
 }
 
-export function renderSong(song: Song, offset: number): string {
+export function renderSong(song: Song, offset: number, audio: SongAudio | null = null): string {
   const id = escapeHtml(song.id);
   const sourceKey = escapeHtml(song.sourceKey);
   const offsetValue = String(offset);
+  const audioStatus = audio?.status ?? "none";
+  const audioReady = audioStatus === "ready";
+  const pitchLabel = offset === 0 ? "0" : `${offset > 0 ? "+" : ""}${offset}`;
+  const audioSourceLabel = audioStatus === "fetching"
+    ? "Descargando audio…"
+    : audioStatus === "failed"
+      ? "Audio transpuesto no disponible."
+      : "";
   const controls = [
     { label: "+1 tono", delta: 2 },
     { label: "+½ tono", delta: 1 },
@@ -252,11 +261,21 @@ export function renderSong(song: Song, offset: number): string {
            </div>
            <span class="youtube-progress-time" data-youtube-progress-duration>0:00</span>
          </div>
-         <div class="youtube-controls-row">
-           <button type="button" class="youtube-play-button" data-youtube-play disabled aria-label="Reproducir">▶ <span>Reproducir</span></button>
-           <button type="button" class="secondary youtube-options-button" data-song-view="options">Opciones</button>
-         </div>
-       </div>
+          <div class="youtube-controls-row">
+            <button type="button" class="youtube-play-button" data-youtube-play disabled aria-label="Reproducir">▶ <span>Reproducir</span></button>
+            <div class="pitch-controls" role="group" aria-label="Transponer canción">
+              <button type="button" class="pitch-button" hx-post="/songs/${id}/transpose" hx-vals='{"offset":${offsetValue},"delta":-1}' hx-target="#song-container" hx-swap="innerHTML" hx-indicator="this" hx-disabled-elt="this" aria-label="Bajar medio tono" title="Bajar medio tono"${offset <= -12 ? " disabled" : ""}>−½</button>
+              <output class="pitch-value" data-pitch-value title="${transpositionLabel(offset)}" aria-label="Transposición actual: ${transpositionLabel(offset)}">${pitchLabel}</output>
+              <button type="button" class="pitch-button" hx-post="/songs/${id}/transpose" hx-vals='{"offset":${offsetValue},"delta":1}' hx-target="#song-container" hx-swap="innerHTML" hx-indicator="this" hx-disabled-elt="this" aria-label="Subir medio tono" title="Subir medio tono"${offset >= 12 ? " disabled" : ""}>+½</button>
+            </div>
+            <div class="audio-source-toggle" role="group" aria-label="Fuente de audio">
+              <button type="button" class="audio-source-button" data-audio-source="youtube" aria-pressed="${audioReady ? "false" : "true"}" title="Escuchar el audio original">Original</button>
+              <button type="button" class="audio-source-button" data-audio-source="transposed" aria-pressed="${audioReady ? "true" : "false"}"${audioReady ? "" : " disabled"} title="Escuchar el audio transpuesto">Transpuesto</button>
+            </div>
+            <button type="button" class="secondary youtube-options-button" data-song-view="options">Opciones</button>
+          </div>
+          <p class="audio-source-status" data-audio-status-text role="status" aria-live="polite">${audioSourceLabel}</p>
+        </div>
        <div class="song song-lyrics" aria-label="Letra y acordes">${lyrics}</div>
      </div>
      <div class="song-view song-view-options" data-view-panel="options">
@@ -282,7 +301,7 @@ export function renderSong(song: Song, offset: number): string {
        </div>
      </div>`;
 
-  return `<section class="song-card" aria-label="Canción transpuesta" data-view="${initialView}" data-song-id="${id}" data-source-key="${sourceKey}" data-offset="${offsetValue}" data-video-id="${videoId}" data-video-url="${videoUrl}" data-video-status="${song.videoStatus}" data-timestamps-status="${song.timestampsStatus}" data-has-video="${hasVideo}">
+  return `<section class="song-card" aria-label="Canción transpuesta" data-view="${initialView}" data-song-id="${id}" data-source-key="${sourceKey}" data-offset="${offsetValue}" data-video-id="${videoId}" data-video-url="${videoUrl}" data-video-status="${song.videoStatus}" data-timestamps-status="${song.timestampsStatus}" data-audio-status="${audioStatus}" data-has-video="${hasVideo}">
   <header class="song-header">
     <div class="song-title-block"><p class="eyebrow">${escapeHtml(song.artist)}</p><h2 id="selected-song-title" tabindex="-1">${escapeHtml(song.title)}</h2></div>
     <div class="song-header-actions">

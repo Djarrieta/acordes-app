@@ -9,6 +9,7 @@ import {
   waitForEnrichment,
 } from "../src/songs/enrichment/enrichment.service";
 import { handleSongsRoutes } from "../src/songs/songs.routes";
+import { resetAudioProviders, setAudioProvidersForTests } from "../src/audio/audio.service";
 import type { Song } from "../src/songs/songs.model";
 
 let db: Database;
@@ -34,6 +35,8 @@ beforeEach(() => {
   resetRateLimits();
   resetEnrichmentProviders();
   setEnrichmentProvidersForTests({ transcript: async () => null });
+  resetAudioProviders();
+  setAudioProvidersForTests({ download: async () => null });
   song = createSong(db, {
     sourceKey: "/artista/cancion.shtml",
     sourceUrl: "https://acordes.lacuerda.net/artista/cancion.shtml",
@@ -48,6 +51,7 @@ beforeEach(() => {
 
 afterEach(() => {
   resetEnrichmentProviders();
+  resetAudioProviders();
   setDb(null);
   db.close();
 });

@@ -87,4 +87,17 @@ CREATE TABLE IF NOT EXISTS song_edits (
   created_at TEXT NOT NULL
 );
 CREATE INDEX IF NOT EXISTS idx_song_edits_song ON song_edits(song_id, created_at);
+
+CREATE TABLE IF NOT EXISTS song_audio (
+  song_id     TEXT PRIMARY KEY REFERENCES songs(id) ON DELETE CASCADE,
+  video_id    TEXT NOT NULL,
+  status      TEXT NOT NULL DEFAULT 'none',
+  error       TEXT,
+  mime        TEXT,
+  path        TEXT,
+  size_bytes  INTEGER,
+  duration_ms INTEGER,
+  attempts    INTEGER NOT NULL DEFAULT 0,
+  fetched_at  TEXT
+);
 `;

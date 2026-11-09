@@ -8,9 +8,10 @@ export function homePage(): Response {
   <meta name="color-scheme" content="light">
   <title>Acordes — transpositor</title>
   <link rel="icon" href="data:,">
-  <link rel="stylesheet" href="/public/styles.css?v=editor-5">
+  <link rel="stylesheet" href="/public/styles.css?v=editor-6">
   <script src="https://unpkg.com/htmx.org@2.0.4"></script>
-  <script src="/public/youtube.js?v=20" defer></script>
+  <script src="/public/youtube.js?v=21" defer></script>
+  <script src="/public/audio.js?v=7" defer></script>
   <script src="/public/editor.js?v=2" defer></script>
   <script>
     let likedSourceKeys = new Set();

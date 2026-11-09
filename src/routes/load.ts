@@ -1,5 +1,7 @@
 import { LacuerdaFetchError, LacuerdaParseError } from "../parser/lacuerda";
 import { renderError, renderSong } from "../render/song";
+import { getDb } from "../db";
+import { getAudio } from "../audio/audio.db";
 import { loadSong, validateOffset } from "../songs/songs.service";
 
 export async function loadRoute(request: Request): Promise<Response> {
@@ -31,7 +33,7 @@ export async function loadRoute(request: Request): Promise<Response> {
   try {
     const { song } = await loadSong(url, offset ?? 0);
     const renderOffset = offset ?? song.preferredOffset;
-    return new Response(renderSong(song, renderOffset), {
+    return new Response(renderSong(song, renderOffset, getAudio(getDb(), song.id)), {
       headers: { "Content-Type": "text/html; charset=utf-8" },
     });
   } catch (error) {

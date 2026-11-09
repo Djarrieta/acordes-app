@@ -748,6 +748,124 @@ h1 {
   font-weight: 700;
 }
 
+.pitch-controls {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.15rem;
+  border: 1px solid #d6d1c6;
+  border-radius: 999px;
+  background: #fffefa;
+  padding: 0.15rem;
+}
+
+.pitch-button {
+  display: inline-flex;
+  width: 2.1rem;
+  height: 2.1rem;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: #3e3a34;
+  font-size: 0.85rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.pitch-button:hover:not(:disabled) {
+  background: #f2efe8;
+}
+
+.pitch-button:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+.pitch-button.htmx-request {
+  opacity: 0.55;
+  cursor: progress;
+}
+
+.pitch-button.htmx-request::after {
+  content: "";
+  width: 0.7rem;
+  height: 0.7rem;
+  margin-left: 0.3rem;
+  border: 2px solid currentColor;
+  border-top-color: transparent;
+  border-radius: 50%;
+  animation: search-spin 700ms linear infinite;
+}
+
+.pitch-value {
+  min-width: 1.6rem;
+  text-align: center;
+  color: #3e3a34;
+  font-size: 0.78rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.audio-source-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.12rem;
+  border: 1px solid #d6d1c6;
+  border-radius: 999px;
+  background: #f2efe8;
+  padding: 0.15rem;
+}
+
+.audio-source-button {
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: #5a564e;
+  padding: 0.45rem 0.8rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.audio-source-button:hover:not(:disabled) {
+  color: #3e3a34;
+}
+
+.audio-source-button[aria-pressed="true"] {
+  background: #2f684d;
+  color: #fff;
+}
+
+.audio-source-button:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.audio-source-status {
+  margin: 0.55rem 0 0;
+  min-height: 1.1rem;
+  color: #66625a;
+  font-size: 0.82rem;
+  text-align: center;
+}
+
+.audio-source-status:empty {
+  display: none;
+}
+
+.song-card[data-audio-busy="true"] .audio-source-status::before {
+  content: "";
+  display: inline-block;
+  width: 0.8rem;
+  height: 0.8rem;
+  margin-right: 0.4rem;
+  vertical-align: -0.1rem;
+  border: 2px solid #d6d1c6;
+  border-top-color: #2f684d;
+  border-radius: 50%;
+  animation: search-spin 700ms linear infinite;
+}
+
 .youtube-media-box {
   overflow: hidden;
   width: 100%;
@@ -1255,6 +1373,16 @@ body.is-song-view .youtube-playback-controls[hidden] {
 body.is-song-view .youtube-play-button {
   min-height: 2.65rem;
   padding: 0.5rem 1rem;
+}
+
+body.is-song-view .pitch-controls,
+body.is-song-view .audio-source-toggle,
+body.is-song-view .youtube-options-button {
+  min-height: 2.65rem;
+}
+
+body.is-song-view .audio-source-toggle {
+  align-items: stretch;
 }
 
 body.is-song-view .youtube-section {

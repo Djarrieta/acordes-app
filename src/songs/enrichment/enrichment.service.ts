@@ -18,6 +18,7 @@ import {
 import { alignLyrics } from "./align";
 import { searchYoutubeVideos, type VideoCandidate } from "./youtube.search";
 import { fetchTranscript, type Transcript } from "./youtube.transcript";
+import { enqueueAudioDownload } from "../../audio/audio.service";
 
 type Providers = {
   search: (artist: string, title: string, max: number) => Promise<VideoCandidate[]>;
@@ -105,6 +106,7 @@ async function runVideoSearch(db: ReturnType<typeof getDb>, songId: string): Pro
       durationMs: best.durationMs,
     });
     recordEdit(db, songId, "video.auto", { videoId: best.videoId });
+    enqueueAudioDownload(songId, db);
     enqueueAlignment(songId, db);
   } catch (error) {
     console.error("No se pudo buscar el video automáticamente:", error);
@@ -176,6 +178,7 @@ async function runAlignment(db: ReturnType<typeof getDb>, songId: string): Promi
           durationMs: attempt.durationMs,
         });
         recordEdit(db, songId, "video.auto", { videoId: attempt.videoId });
+        enqueueAudioDownload(songId, db);
       }
       break;
     }

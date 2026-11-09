@@ -6,6 +6,7 @@ import {
 } from "../parser/lacuerda";
 import { serializeChordProLine, validateChordProLine } from "../parser/chordpro";
 import { enqueueVideoSearch } from "./enrichment/enrichment.service";
+import { enqueueAudioDownload } from "../audio/audio.service";
 import {
   createSong,
   findSongIdBySourceKey,
@@ -32,7 +33,10 @@ export async function loadSong(
   const existingId = findSongIdBySourceKey(db, sourceKey);
   if (existingId) {
     const song = getSong(db, existingId);
-    if (song) return { song, created: false };
+    if (song) {
+      enqueueAudioDownload(song.id, db);
+      return { song, created: false };
+    }
   }
 
   const parsed = await fetchLacuerdaSong(url.toString());
@@ -51,6 +55,7 @@ export async function loadSong(
     });
     recordEdit(db, song.id, "song.import", { sourceKey });
     enqueueVideoSearch(song.id, db);
+    enqueueAudioDownload(song.id, db);
     return { song: getSong(db, song.id) ?? song, created: true };
   } catch (error) {
     const racedId = findSongIdBySourceKey(db, sourceKey);

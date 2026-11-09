@@ -103,6 +103,7 @@ function updateProgress(section) {
 function seekToTimestamp(seconds) {
   if (!activeSection || !player?.seekTo || !Number.isFinite(seconds)) return;
   player.seekTo(seconds, true);
+  window.AcordesAudio?.seek(seconds);
   updateProgress(activeSection);
 }
 
@@ -280,6 +281,7 @@ function initializePlayer(section, videoId) {
           return;
         }
         player = event.target;
+        window.AcordesAudio?.onPlayerReady(player);
         updateChordControls(section);
         updatePlaybackButton(section);
         updateProgress(section);
@@ -299,6 +301,7 @@ function initializePlayer(section, videoId) {
           section.classList.add("is-playing");
           songCard(section)?.classList.add("is-playing");
           window.setSongView?.("player");
+          window.AcordesAudio?.onYoutubePlaying(event.target, event.target.getCurrentTime ? event.target.getCurrentTime() : 0);
           updateChordControls(section);
           setStatus(section, markMode ? "Marcas activadas." : "");
           if (playbackTimer !== null) window.clearInterval(playbackTimer);
@@ -306,12 +309,14 @@ function initializePlayer(section, videoId) {
           playbackTimer = window.setInterval(() => {
             updateCurrentChord(section);
             updateProgress(section);
+            window.AcordesAudio?.syncDrift(player?.getCurrentTime ? player.getCurrentTime() : 0);
           }, 250);
           updatePlaybackButton(section);
           updateProgress(section);
         } else {
           section.classList.remove("is-playing");
           songCard(section)?.classList.remove("is-playing");
+          window.AcordesAudio?.onYoutubePaused(event.target);
           updatePlaybackButton(section);
           updateProgress(section);
           updateChordControls(section);
@@ -417,6 +422,7 @@ function initializeSection(section) {
   } else {
     initializePlayer(section, videoId);
   }
+  window.AcordesAudio?.init(section);
   startPolling(section);
 }
 
@@ -462,6 +468,7 @@ async function linkVideo(section, videoId, url) {
 
 document.addEventListener("htmx:beforeSwap", (event) => {
   if (event.detail.target?.id !== "song-container") return;
+  window.AcordesAudio?.preserve();
   stopPolling();
   markMode = false;
   highlightedChordIndex = null;

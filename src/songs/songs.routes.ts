@@ -37,6 +37,8 @@ import {
   validateOffset,
 } from "./songs.service";
 import { renderCandidates, renderEditor } from "./songs.views";
+import { getAudio } from "../audio/audio.db";
+import { enqueueAudioDownload, invalidateSongAudio } from "../audio/audio.service";
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const SONG_PATH = /^\/songs\/([0-9a-f-]+)(\/.*)?$/i;
@@ -103,12 +105,13 @@ export async function handleSongsRoutes(
     const offset = validateOffset(url.searchParams.get("offset") ?? "0") ?? 0;
     const song = getSong(db, songId);
     if (!song) return missingSong();
-    return html(renderSong(song, offset));
+    return html(renderSong(song, offset, getAudio(db, songId)));
   }
 
   if (method === "GET" && suffix === "/status") {
     const song = getSong(db, songId);
     if (!song) return json({ error: "La canción ya no está disponible." }, 404);
+    const audio = getAudio(db, songId);
     return json({
       id: song.id,
       version: song.version,
@@ -117,6 +120,8 @@ export async function handleSongsRoutes(
       timestampsStatus: song.timestampsStatus,
       timestampsError: song.timestampsError,
       timestampSource: song.timestampSource,
+      audioStatus: audio?.status ?? "none",
+      audioError: audio?.error ?? null,
     });
   }
 
@@ -147,16 +152,16 @@ export async function handleSongsRoutes(
     const currentOffset = validateOffset(form.get("offset") as string | null) ?? 0;
     if (form.get("reset") !== null) {
       setPreferredOffset(db, songId, 0);
-      return html(renderSong(song, 0));
+      return html(renderSong(song, 0, getAudio(db, songId)));
     }
     const deltaValue = form.get("delta");
     const delta = typeof deltaValue === "string" ? Number(deltaValue) : Number.NaN;
     if (!Number.isInteger(delta) || ![-2, -1, 1, 2].includes(delta)) {
       return badRequest("El intervalo de transposición no es válido.");
     }
-    const nextOffset = currentOffset + delta;
+    const nextOffset = Math.max(-12, Math.min(12, currentOffset + delta));
     setPreferredOffset(db, songId, nextOffset);
-    return html(renderSong(song, nextOffset));
+    return html(renderSong(song, nextOffset, getAudio(db, songId)));
   }
 
   if (suffix === "/timestamps/auto" || suffix === "/timestamps/retry") {
@@ -184,6 +189,7 @@ export async function handleSongsRoutes(
 
     if (form.get("clear") !== null) {
       clearVideo(db, song.id);
+      void invalidateSongAudio(song.id, db);
       recordEdit(db, song.id, "video.clear", {});
       return json({ ok: true });
     }
@@ -207,6 +213,7 @@ export async function handleSongsRoutes(
     const candidate = listCandidates(db, song.id).find((item) => item.videoId === videoId);
     if (song.video && song.video.id !== videoId) {
       clearAllTimestamps(db, song.id);
+      void invalidateSongAudio(song.id, db);
     }
     setVideo(db, song.id, {
       id: videoId,
@@ -216,6 +223,7 @@ export async function handleSongsRoutes(
       durationMs: candidate?.durationMs ?? null,
     });
     recordEdit(db, song.id, "video.set", { videoId });
+    enqueueAudioDownload(song.id, db);
     enqueueAlignment(song.id, db);
     return json({ ok: true, videoId });
   }

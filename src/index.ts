@@ -8,10 +8,13 @@ import { loadRoute } from "./routes/load";
 import { artistRoute, searchRoute } from "./routes/search";
 import { youtubeVideoIdRoute } from "./routes/youtube";
 import { resumePendingJobs } from "./songs/enrichment/enrichment.service";
+import { resumePendingAudioDownloads } from "./audio/audio.service";
+import { handleAudioRoutes } from "./audio/audio.routes";
 import { handleSongsRoutes } from "./songs/songs.routes";
 
 getDb();
 resumePendingJobs();
+resumePendingAudioDownloads();
 
 const port = config.port;
 const hostname = config.host;
@@ -48,6 +51,8 @@ Bun.serve({
     }
 
     if (pathname.startsWith("/songs/")) {
+      const audioResponse = await handleAudioRoutes(request, url);
+      if (audioResponse) return audioResponse;
       const response = await handleSongsRoutes(request, url);
       if (response) return response;
     }
@@ -66,6 +71,17 @@ Bun.serve({
       return new Response(Bun.file(new URL("../public/editor.js", import.meta.url)), {
         headers: { "Content-Type": "text/javascript; charset=utf-8" },
       });
+    }
+    if (method === "GET" && pathname === "/public/audio.js") {
+      return new Response(Bun.file(new URL("../public/audio.js", import.meta.url)), {
+        headers: { "Content-Type": "text/javascript; charset=utf-8" },
+      });
+    }
+    if (method === "GET" && pathname === "/public/rubberband-processor.js") {
+      return new Response(
+        Bun.file(new URL("../node_modules/rubberband-web/public/rubberband-processor.js", import.meta.url)),
+        { headers: { "Content-Type": "text/javascript; charset=utf-8" } },
+      );
     }
 
     if (pathname === "/search" || pathname === "/artist") {
