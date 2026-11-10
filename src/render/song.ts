@@ -222,7 +222,7 @@ export function renderSong(song: Song, offset: number, audio: SongAudio | null =
   ]
     .map(
       ({ label, delta }) =>
-        `<button type="button" hx-post="/songs/${id}/transpose" hx-vals='{"offset":${offsetValue},"delta":${delta}}' hx-target="#song-container" hx-swap="innerHTML">${label}</button>`,
+         `<button type="button" hx-post="/songs/${id}/transpose" hx-vals='{"offset":${offsetValue},"delta":${delta}}' hx-target="#song-container" hx-swap="innerHTML" hx-indicator="this" hx-disabled-elt="this">${label}</button>`,
     )
     .join("\n");
   let chordIndex = 0;
@@ -283,7 +283,7 @@ export function renderSong(song: Song, offset: number, audio: SongAudio | null =
          <h3 class="option-heading">Tonalidad</h3>
          <div class="song-controls" aria-label="Transponer canción">
            ${controls}
-           <button type="button" class="secondary" hx-post="/songs/${id}/transpose" hx-vals='{"offset":${offsetValue},"reset":1}' hx-target="#song-container" hx-swap="innerHTML">Original</button>
+            <button type="button" class="secondary" hx-post="/songs/${id}/transpose" hx-vals='{"offset":${offsetValue},"reset":1}' hx-target="#song-container" hx-swap="innerHTML" hx-indicator="this" hx-disabled-elt="this">Original</button>
            <output class="transpose-status">${transpositionLabel(offset)}</output>
          </div>
        </section>

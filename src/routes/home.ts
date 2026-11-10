@@ -54,7 +54,11 @@ export function homePage(): Response {
       previousView = document.querySelector("#song-container .song-card")?.dataset.view ?? null;
     });
     document.addEventListener("htmx:beforeRequest", (event) => {
-      if (event.detail?.target?.id === "song-container") {
+      const requestPath = event.detail?.requestConfig?.path ?? "";
+      // Solo se muestra el cargador de página al cargar una canción nueva;
+      // al transponer (modificar el tono) se mantiene el contenido actual
+      // y el botón pulsado muestra su propio indicador, evitando el parpadeo.
+      if (event.detail?.target?.id === "song-container" && requestPath === "/load") {
         document.getElementById("song-loader")?.removeAttribute("hidden");
       }
       if (event.detail.target?.id === "search-results") {
