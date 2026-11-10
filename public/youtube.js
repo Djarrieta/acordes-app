@@ -3,6 +3,7 @@ const VIDEO_ID_PATTERN = /^[a-zA-Z0-9_-]{11}$/;
 let activeSection = null;
 let player = null;
 let playerVideoId = null;
+let playerMuted = null;
 let apiLoading = false;
 let pendingPlayback = null;
 let markMode = false;
@@ -256,9 +257,35 @@ function destroyPlayer(section) {
   songCard(section)?.classList.remove("is-playing");
 }
 
+function wantsMutedVideo() {
+  return Boolean(window.AcordesAudio?.videoShouldBeMuted?.());
+}
+
+function syncVideoMute() {
+  if (!activeSection || !player || !playerVideoId || !window.YT?.Player) return;
+  if (playerMuted === wantsMutedVideo()) return;
+  const section = activeSection;
+  const videoId = playerVideoId;
+  try {
+    pendingPlayback = {
+      songId: songId(section),
+      videoId,
+      seconds: player.getCurrentTime ? player.getCurrentTime() : 0,
+      wasPlaying: player.getPlayerState?.() === window.YT.PlayerState.PLAYING,
+    };
+  } catch (error) {
+    console.error("No se pudo conservar la posición del video:", error);
+  }
+  destroyPlayer(section);
+  initializePlayer(section, videoId);
+}
+
+window.addEventListener("acordes:audio-mode", syncVideoMute);
+
 function initializePlayer(section, videoId) {
   if (activeSection !== section || !VIDEO_ID_PATTERN.test(videoId) || !window.YT?.Player) return;
-  if (player && playerVideoId === videoId && player.getPlayerState) {
+  const muted = wantsMutedVideo();
+  if (player && playerVideoId === videoId && player.getPlayerState && playerMuted === muted) {
     updateChordControls(section);
     updateProgress(section);
     return;
@@ -270,10 +297,13 @@ function initializePlayer(section, videoId) {
   const element = document.createElement("div");
   host.append(element);
   setStatus(section, "");
+  // En iOS/Safari la API no puede silenciar el video (mute/setVolume no tienen efecto),
+  // por eso el silencio se decide al crear el iframe con mute=1.
+  playerMuted = muted;
   player = new window.YT.Player(element, {
     width: "100%",
     videoId,
-    playerVars: { playsinline: 1, origin: window.location.origin },
+    playerVars: { playsinline: 1, origin: window.location.origin, mute: muted ? 1 : 0 },
     events: {
       onReady(event) {
         if (activeSection !== section || section.dataset.videoId !== videoId) {
@@ -316,7 +346,12 @@ function initializePlayer(section, videoId) {
         } else {
           section.classList.remove("is-playing");
           songCard(section)?.classList.remove("is-playing");
-          window.AcordesAudio?.onYoutubePaused(event.target);
+          if (
+            event.data === window.YT.PlayerState.PAUSED
+            || event.data === window.YT.PlayerState.ENDED
+          ) {
+            window.AcordesAudio?.onYoutubePaused(event.target);
+          }
           updatePlaybackButton(section);
           updateProgress(section);
           updateChordControls(section);
@@ -468,7 +503,7 @@ async function linkVideo(section, videoId, url) {
 
 document.addEventListener("htmx:beforeSwap", (event) => {
   if (event.detail.target?.id !== "song-container") return;
-  window.AcordesAudio?.preserve();
+  window.AcordesAudio?.preserve(event.detail.requestConfig?.path);
   stopPolling();
   markMode = false;
   highlightedChordIndex = null;

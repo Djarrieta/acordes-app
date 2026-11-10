@@ -32,6 +32,9 @@ function createBrowserContext() {
     AudioContext: class {},
     AudioWorkletNode: class {},
   };
+  context.addEventListener = noop;
+  context.removeEventListener = noop;
+  context.dispatchEvent = noop;
   context.window = context;
   vm.createContext(context);
   return context;

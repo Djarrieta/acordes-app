@@ -269,8 +269,8 @@ export function renderSong(song: Song, offset: number, audio: SongAudio | null =
               <button type="button" class="pitch-button" hx-post="/songs/${id}/transpose" hx-vals='{"offset":${offsetValue},"delta":1}' hx-target="#song-container" hx-swap="innerHTML" hx-indicator="this" hx-disabled-elt="this" aria-label="Subir medio tono" title="Subir medio tono"${offset >= 12 ? " disabled" : ""}>+½</button>
             </div>
             <div class="audio-source-toggle" role="group" aria-label="Fuente de audio">
-              <button type="button" class="audio-source-button" data-audio-source="youtube" aria-pressed="${audioReady ? "false" : "true"}" title="Escuchar el audio original">Original</button>
-              <button type="button" class="audio-source-button" data-audio-source="transposed" aria-pressed="${audioReady ? "true" : "false"}"${audioReady ? "" : " disabled"} title="Escuchar el audio transpuesto">Transpuesto</button>
+              <button type="button" class="audio-source-button${audioReady ? "" : " is-active"}" data-audio-source="youtube" aria-pressed="${audioReady ? "false" : "true"}" title="Escuchar el audio original">Original</button>
+              <button type="button" class="audio-source-button${audioReady ? " is-active" : ""}" data-audio-source="transposed" aria-pressed="${audioReady ? "true" : "false"}"${audioReady ? "" : " disabled"} title="Escuchar el audio transpuesto">Transpuesto</button>
             </div>
             <button type="button" class="secondary youtube-options-button" data-song-view="options">Opciones</button>
           </div>

@@ -45,7 +45,8 @@ export async function downloadAudio(
       ytdlp,
       "--no-warnings",
       "-f",
-      "bestaudio",
+      // M4A (AAC) es el único formato que Safari/iOS reproduce de forma fiable en <audio>.
+      "bestaudio[ext=m4a]/bestaudio[acodec^=mp4a]/bestaudio",
       "-o",
       join(directory, "%(id)s.%(ext)s"),
       `https://www.youtube.com/watch?v=${videoId}`,

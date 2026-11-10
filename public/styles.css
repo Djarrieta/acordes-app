@@ -831,7 +831,8 @@ h1 {
   color: #3e3a34;
 }
 
-.audio-source-button[aria-pressed="true"] {
+.audio-source-button[aria-pressed="true"],
+.audio-source-button.is-active {
   background: #2f684d;
   color: #fff;
 }
