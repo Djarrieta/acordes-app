@@ -10,7 +10,8 @@ let markMode = false;
 let progressSeeking = false;
 let playbackTimer = null;
 let pollTimer = null;
-let highlightedChordIndex = null;
+let highlightedLineIndex = null;
+let shownChordKey = null;
 let chordDiagramRequest = 0;
 let requestedAccompanimentChord = "";
 const chordDiagramCache = new Map();
@@ -34,6 +35,44 @@ window.pauseAcordesPlayer = () => {
   }
 };
 
+function togglePlayback() {
+  if (!player?.getPlayerState || !window.YT?.PlayerState) return;
+  if (player.getPlayerState() === window.YT.PlayerState.PLAYING) player.pauseVideo();
+  else player.playVideo();
+  updatePlaybackButton(activeSection);
+}
+
+const MEDIA_COLLAPSED_KEY = "acordes.mediaCollapsed";
+
+function isMediaCollapsed() {
+  try {
+    return window.localStorage.getItem(MEDIA_COLLAPSED_KEY) === "1";
+  } catch {
+    return false;
+  }
+}
+
+function setMediaCollapsed(collapsed) {
+  try {
+    window.localStorage.setItem(MEDIA_COLLAPSED_KEY, collapsed ? "1" : "0");
+  } catch {
+    // Sin almacenamiento: el estado solo dura mientras la tarjeta esté en pantalla.
+  }
+}
+
+// El video sigue montado (solo se oculta visualmente) para que el audio no se interrumpa.
+function applyMediaCollapsed(card) {
+  if (!card) return;
+  const collapsed = isMediaCollapsed();
+  card.classList.toggle("is-media-collapsed", collapsed);
+  const button = card.querySelector("[data-media-toggle]");
+  if (!button) return;
+  button.setAttribute("aria-pressed", String(!collapsed));
+  const label = collapsed ? "Mostrar acorde y video" : "Ocultar acorde y video";
+  button.setAttribute("aria-label", label);
+  button.setAttribute("title", label);
+}
+
 function setStatus(section, message) {
   const status = section?.querySelector("[data-youtube-status]");
   if (status) status.textContent = message;
@@ -48,13 +87,28 @@ function formatTimestamp(seconds) {
     : `${minutes}:${String(remainingSeconds).padStart(2, "0")}`;
 }
 
-function chordElements(section) {
-  return [...(songCard(section)?.querySelectorAll("[data-chord-index]") ?? [])];
+function lineElements(section) {
+  return [...(songCard(section)?.querySelectorAll(".song-lyrics .song-line") ?? [])];
 }
 
-function chordTime(chord) {
-  const value = Number(chord.dataset.chordTime);
+function lineTime(line) {
+  const raw = line.dataset.lineStart;
+  if (raw === undefined || raw === "") return null;
+  const value = Number(raw);
   return Number.isSafeInteger(value) && value >= 0 ? value : null;
+}
+
+function setLineMarker(line, ms) {
+  const marker = line.querySelector(".song-line-time");
+  if (ms === null) {
+    line.removeAttribute("data-line-start");
+    line.removeAttribute("title");
+    if (marker) marker.textContent = "";
+    return;
+  }
+  line.dataset.lineStart = String(ms);
+  line.title = `Marca de línea: ${formatTimestamp(ms / 1000)}`;
+  if (marker) marker.textContent = formatTimestamp(ms / 1000);
 }
 
 function updatePlaybackButton(section) {
@@ -119,29 +173,6 @@ function updateChordControls(section) {
   if (timestampsAuto) timestampsAuto.disabled = !section?.dataset.videoId || busy;
   if (timestampsRetry) timestampsRetry.disabled = !section?.dataset.videoId;
 
-  for (const chord of chordElements(section)) {
-    const time = chordTime(chord);
-    const marker = chord.querySelector(".chord-time-marker");
-    if (time !== null) {
-      chord.title = `Marca de reproducción: ${formatTimestamp(time / 1000)}`;
-      if (marker) marker.textContent = formatTimestamp(time / 1000);
-    } else {
-      chord.removeAttribute("title");
-      if (marker) marker.textContent = "";
-    }
-    const chordName = chord.dataset.chordName;
-    chord.setAttribute(
-      "aria-label",
-      markMode
-        ? time !== null
-          ? `Actualizar la marca de ${chordName}, actualmente en ${formatTimestamp(time / 1000)}`
-          : `Marcar el tiempo de ${chordName}`
-        : time !== null
-          ? `Ver diagrama de ${chordName}. Marca de reproducción en ${formatTimestamp(time / 1000)}`
-          : `Ver diagrama de ${chordName}`,
-    );
-    chord.classList.toggle("is-marking", markMode);
-  }
 }
 
 function setMarkMode(section, enabled) {
@@ -155,44 +186,91 @@ function setMarkMode(section, enabled) {
   const toggle = section?.querySelector("[data-chord-mark-toggle]");
   if (toggle) {
     toggle.setAttribute("aria-pressed", String(markMode));
-    toggle.textContent = markMode ? "Desactivar marcas de acordes" : "Activar marcas de acordes";
+    toggle.textContent = markMode ? "Desactivar marcas de líneas" : "Activar marcas de líneas";
   }
   if (section) updateChordControls(section);
 }
 
-function updateCurrentChord(section) {
+// Una línea canta como mucho a ~700 ms por palabra (mín. 2,5 s); el resto hasta la
+// siguiente marca se considera pausa instrumental y no se reparte entre acordes.
+function estimatedLineDurationMs(line, nextStart, start) {
+  const words = [...line.querySelectorAll(".song-word-text")]
+    .flatMap((node) => (node.textContent ?? "").trim().split(/\s+/))
+    .filter(Boolean).length;
+  const cap = Math.max(2500, words * 700);
+  return nextStart === null ? cap : Math.max(1, Math.min(nextStart - start, cap));
+}
+
+// Estima el acorde sonando dentro de la línea según la posición de su columna
+// entre el inicio de la línea y su duración estimada. Es una aproximación.
+function estimateChord(line, nextStart, start, currentMs) {
+  const chords = [...line.querySelectorAll("[data-chord-index]")];
+  if (chords.length === 0) return null;
+  const duration = estimatedLineDurationMs(line, nextStart, start);
+  const fraction = Math.min(1, Math.max(0, (currentMs - start) / duration));
+  const length = Number(line.dataset.lyricLength) || 0;
+  let chosen = chords[0];
+  chords.forEach((chord, index) => {
+    const position = length > 0
+      ? Math.min(1, Number(chord.dataset.chordColumn) / length)
+      : index / chords.length;
+    if (position <= fraction) chosen = chord;
+  });
+  return chosen;
+}
+
+function updateCurrentLine(section) {
   if (!player?.getCurrentTime || activeSection !== section) return;
-  const currentTimeMs = player.getCurrentTime() * 1000;
+  const currentMs = player.getCurrentTime() * 1000;
+  const lines = lineElements(section);
   let activeIndex = null;
-  let activeTimestamp = -1;
-  for (const chord of chordElements(section)) {
-    const time = chordTime(chord);
-    if (time !== null && time <= currentTimeMs && time >= activeTimestamp) {
-      activeIndex = Number(chord.dataset.chordIndex);
-      activeTimestamp = time;
+  let activeStart = -1;
+  lines.forEach((line, index) => {
+    const time = lineTime(line);
+    if (time !== null && time <= currentMs && time >= activeStart) {
+      activeIndex = index;
+      activeStart = time;
+    }
+  });
+
+  const card = songCard(section);
+  if (activeIndex !== highlightedLineIndex) {
+    highlightedLineIndex = activeIndex;
+    lines.forEach((line, index) => line.classList.toggle("is-current", index === activeIndex));
+    const activeLine = activeIndex === null ? null : lines[activeIndex];
+    const lyrics = card?.querySelector(".song-lyrics");
+    if (activeLine instanceof HTMLElement && lyrics instanceof HTMLElement) {
+      const lineTop = activeLine.getBoundingClientRect().top
+        - lyrics.getBoundingClientRect().top
+        + lyrics.scrollTop;
+      lyrics.scrollTo({
+        top: lineTop - (lyrics.clientHeight - activeLine.offsetHeight) / 2,
+        behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth",
+      });
     }
   }
-  if (activeIndex === highlightedChordIndex) return;
-  highlightedChordIndex = activeIndex;
-  const card = songCard(section);
-  card?.querySelectorAll("[data-chord-index]").forEach((chord) => {
-    chord.classList.toggle("is-current", Number(chord.dataset.chordIndex) === activeIndex);
-    chord.closest(".song-line")?.classList.remove("is-current");
-  });
-  const activeChord = card?.querySelector(`[data-chord-index="${activeIndex}"]`);
-  const activeLine = activeChord?.closest(".song-line");
-  activeLine?.classList.add("is-current");
-  const lyrics = card?.querySelector(".song-lyrics");
-  if (activeLine instanceof HTMLElement && lyrics instanceof HTMLElement) {
-    const lineTop = activeLine.getBoundingClientRect().top
-      - lyrics.getBoundingClientRect().top
-      + lyrics.scrollTop;
-    lyrics.scrollTo({
-      top: lineTop - (lyrics.clientHeight - activeLine.offsetHeight) / 2,
-      behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth",
-    });
+
+  let chord = null;
+  if (activeIndex !== null) {
+    let nextStart = null;
+    for (let index = activeIndex + 1; index < lines.length; index += 1) {
+      const time = lineTime(lines[index]);
+      if (time !== null && time > activeStart) {
+        nextStart = time;
+        break;
+      }
+    }
+    chord = estimateChord(lines[activeIndex], nextStart, activeStart, currentMs);
+    // Líneas sin acordes: conserva el último acorde de las líneas anteriores.
+    for (let index = activeIndex - 1; !chord && index >= 0; index -= 1) {
+      const previous = [...lines[index].querySelectorAll("[data-chord-index]")];
+      chord = previous.at(-1) ?? null;
+    }
   }
-  void updateAccompanimentChord(section, activeChord);
+  const key = chord ? `${chord.dataset.chordId}|${chord.dataset.chordName}` : null;
+  if (key === shownChordKey) return;
+  shownChordKey = key;
+  void updateAccompanimentChord(section, chord);
 }
 
 async function updateAccompanimentChord(section, chord) {
@@ -252,7 +330,8 @@ function destroyPlayer(section) {
   }
   player = null;
   playerVideoId = null;
-  highlightedChordIndex = null;
+  highlightedLineIndex = null;
+  shownChordKey = null;
   section?.classList.remove("is-playing");
   songCard(section)?.classList.remove("is-playing");
 }
@@ -335,9 +414,9 @@ function initializePlayer(section, videoId) {
           updateChordControls(section);
           setStatus(section, markMode ? "Marcas activadas." : "");
           if (playbackTimer !== null) window.clearInterval(playbackTimer);
-          updateCurrentChord(section);
+          updateCurrentLine(section);
           playbackTimer = window.setInterval(() => {
-            updateCurrentChord(section);
+            updateCurrentLine(section);
             updateProgress(section);
             window.AcordesAudio?.syncDrift(player?.getCurrentTime ? player.getCurrentTime() : 0);
           }, 250);
@@ -385,24 +464,47 @@ function stopPolling() {
   }
 }
 
+function renderLoaderSteps(card, steps) {
+  const list = card?.querySelector("[data-loader-steps]");
+  if (!list || !Array.isArray(steps)) return;
+  const signature = steps.map((step) => `${step.key}:${step.state}:${step.label}`).join("|");
+  if (list.dataset.signature === signature) return;
+  list.dataset.signature = signature;
+  list.replaceChildren(
+    ...steps.map((step) => {
+      const item = document.createElement("li");
+      item.className = `loader-step is-${step.state}`;
+      item.dataset.loaderStep = step.key;
+      const icon = document.createElement("span");
+      icon.className = "loader-step-icon";
+      icon.setAttribute("aria-hidden", "true");
+      const label = document.createElement("span");
+      label.className = "loader-step-label";
+      label.textContent = step.label;
+      item.append(icon, label);
+      return item;
+    }),
+  );
+}
+
 function startPolling(section) {
   stopPolling();
   const card = songCard(section);
   if (!card) return;
   const busy = () =>
-    card.dataset.videoStatus === "searching"
+    card.dataset.view === "loader"
+    || card.dataset.videoStatus === "searching"
     || ["pending", "transcribing", "aligning"].includes(card.dataset.timestampsStatus);
   if (!busy()) return;
   const id = card.dataset.songId;
+  const interval = card.dataset.view === "loader" ? 1000 : 2000;
   pollTimer = window.setInterval(async () => {
     try {
       const response = await fetch(`/songs/${id}/status`, { headers: { Accept: "application/json" } });
       if (!response.ok) return;
       const status = await response.json();
-      if (
-        status.videoStatus === "searching"
-        || ["pending", "transcribing", "aligning"].includes(status.timestampsStatus)
-      ) {
+      if (status.busy) {
+        renderLoaderSteps(card, status.steps);
         return;
       }
       stopPolling();
@@ -410,7 +512,7 @@ function startPolling(section) {
     } catch (error) {
       console.error("No se pudo consultar el estado de la canción:", error);
     }
-  }, 2000);
+  }, interval);
 }
 
 function reloadPlayer() {
@@ -436,6 +538,12 @@ function initializeSection(section) {
   const playbackControls = card?.querySelector("[data-youtube-playback-controls]");
   const host = card?.querySelector("[data-youtube-player]");
   if (input) input.value = videoUrl;
+  applyMediaCollapsed(card);
+  if (card?.dataset.view === "loader") {
+    // Mientras se prepara la canción solo se muestra el cargador; el reproductor se crea al terminar.
+    startPolling(section);
+    return;
+  }
   updateChordControls(section);
   const hasVideo = VIDEO_ID_PATTERN.test(videoId);
   if (media) media.hidden = !hasVideo;
@@ -506,7 +614,8 @@ document.addEventListener("htmx:beforeSwap", (event) => {
   window.AcordesAudio?.preserve(event.detail.requestConfig?.path);
   stopPolling();
   markMode = false;
-  highlightedChordIndex = null;
+  highlightedLineIndex = null;
+  shownChordKey = null;
   progressSeeking = false;
   if (playbackTimer !== null) {
     window.clearInterval(playbackTimer);
@@ -564,10 +673,14 @@ document.addEventListener("click", (event) => {
   if (!(target instanceof Element)) return;
   const playButton = target.closest("[data-youtube-play]");
   if (playButton) {
-    if (!player?.getPlayerState || !window.YT?.PlayerState) return;
-    if (player.getPlayerState() === window.YT.PlayerState.PLAYING) player.pauseVideo();
-    else player.playVideo();
-    updatePlaybackButton(activeSection);
+    togglePlayback();
+    return;
+  }
+
+  const mediaToggle = target.closest("[data-media-toggle]");
+  if (mediaToggle) {
+    setMediaCollapsed(!isMediaCollapsed());
+    applyMediaCollapsed(mediaToggle.closest(".song-card"));
     return;
   }
 
@@ -694,19 +807,19 @@ document.addEventListener("change", (event) => {
 document.addEventListener("click", (event) => {
   const target = event.target;
   if (!(target instanceof Element)) return;
-  const chord = target.closest("[data-chord-index]");
-  if (!chord || !markMode) return;
+  const line = target.closest(".song-lyrics .song-line");
+  if (!line || !markMode) return;
   if (songView(activeSection) !== "player") return;
   if (!player?.getCurrentTime) return;
   event.preventDefault();
   event.stopImmediatePropagation();
   const ms = Math.floor(player.getCurrentTime() * 1000);
   const id = songId(activeSection);
-  const chordId = chord.dataset.chordId;
-  if (!id || !chordId) return;
-  chord.dataset.chordTime = String(ms);
-  updateChordControls(activeSection);
-  postForm(`/songs/${encodeURIComponent(id)}/chords/${encodeURIComponent(chordId)}/timestamp`, {
+  const lineId = line.dataset.lineId;
+  if (!id || !lineId) return;
+  const previous = lineTime(line);
+  setLineMarker(line, ms);
+  postForm(`/songs/${encodeURIComponent(id)}/lines/${encodeURIComponent(lineId)}/timestamp`, {
     ms: String(ms),
   })
     .then((response) => {
@@ -716,32 +829,32 @@ document.addEventListener("click", (event) => {
     .catch((error) => {
       console.error(error);
       setStatus(activeSection, "No se pudo guardar.");
-      chord.removeAttribute("data-chord-time");
-      updateChordControls(activeSection);
+      setLineMarker(line, previous);
     });
 }, true);
 
 document.addEventListener("contextmenu", (event) => {
   const target = event.target;
   if (!(target instanceof Element)) return;
-  const chord = target.closest("[data-chord-index]");
-  if (!chord || !markMode) return;
+  const line = target.closest(".song-lyrics .song-line");
+  if (!line || !markMode) return;
   if (songView(activeSection) !== "player") return;
-  if (chordTime(chord) === null) return;
+  if (lineTime(line) === null) return;
   event.preventDefault();
   const id = songId(activeSection);
-  const chordId = chord.dataset.chordId;
-  if (!id || !chordId) return;
-  chord.removeAttribute("data-chord-time");
-  updateChordControls(activeSection);
-  postForm(`/songs/${encodeURIComponent(id)}/chords/${encodeURIComponent(chordId)}/timestamp/clear`, {})
+  const lineId = line.dataset.lineId;
+  if (!id || !lineId) return;
+  const previous = lineTime(line);
+  setLineMarker(line, null);
+  postForm(`/songs/${encodeURIComponent(id)}/lines/${encodeURIComponent(lineId)}/timestamp/clear`, {})
     .then((response) => {
       if (!response.ok) throw new Error("No se pudo borrar la marca.");
-      setStatus(activeSection, `Marca eliminada.`);
+      setStatus(activeSection, "Marca eliminada.");
     })
     .catch((error) => {
       console.error(error);
       setStatus(activeSection, "No se pudo borrar.");
+      setLineMarker(line, previous);
     });
 }, true);
 
@@ -751,4 +864,39 @@ document.body.addEventListener("song-updated", () => {
 
 document.addEventListener("DOMContentLoaded", () => {
   initializeSection(document.querySelector("[data-youtube-song]"));
+});
+
+function isTextEntry(element) {
+  if (!(element instanceof HTMLElement)) return false;
+  if (element.isContentEditable) return true;
+  if (element instanceof HTMLTextAreaElement || element instanceof HTMLSelectElement) return true;
+  if (!(element instanceof HTMLInputElement)) return false;
+  return !["button", "checkbox", "radio", "range", "submit", "reset"].includes(element.type);
+}
+
+let spaceHandled = false;
+
+// La barra espaciadora hace play/pausa solo en la vista del reproductor.
+function spaceShouldTogglePlayback(event) {
+  if (event.code !== "Space" || event.ctrlKey || event.metaKey || event.altKey) return false;
+  if (isTextEntry(event.target)) return false;
+  const card = document.querySelector("#song-container .song-card");
+  if (!card || card.dataset.view !== "player") return false;
+  if (document.querySelector("dialog[open]")) return false;
+  return Boolean(player?.getPlayerState);
+}
+
+document.addEventListener("keydown", (event) => {
+  if (!spaceShouldTogglePlayback(event)) return;
+  event.preventDefault();
+  if (event.repeat) return;
+  spaceHandled = true;
+  togglePlayback();
+});
+
+// Firefox activa el botón enfocado al soltar la barra; se cancela para no pulsarlo dos veces.
+document.addEventListener("keyup", (event) => {
+  if (event.code !== "Space" || !spaceHandled) return;
+  spaceHandled = false;
+  event.preventDefault();
 });

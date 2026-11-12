@@ -7,20 +7,18 @@ import { serializeChordProLine } from "../parser/chordpro";
 import { renderError, renderSong } from "../render/song";
 import { parseYoutubeVideoId } from "../youtube";
 import {
-  addLine,
   bumpVersion,
   clearAllTimestamps,
-  clearChordTimestamp,
+  clearLineStart,
   clearVideo,
-  deleteLine,
   getSong,
   listCandidates,
   recordEdit,
   refreshNonManualLines,
   setPreferredOffset,
-  setChordTimestamp,
+  setLineStart,
   setVideo,
-  updateLine,
+  replaceSongLines,
   updateSongMeta,
 } from "./songs.db";
 import {
@@ -29,15 +27,15 @@ import {
 } from "./enrichment/enrichment.service";
 import type { Song } from "./songs.model";
 import {
-  MAX_LINES,
   currentSong,
   readTrimmedString,
   readVersion,
-  validateChordProText,
+  parseEditorText,
   validateOffset,
 } from "./songs.service";
 import { renderCandidates, renderEditor } from "./songs.views";
 import { getAudio } from "../audio/audio.db";
+import { isSongBusy, loaderSteps } from "./loader-steps";
 import { enqueueAudioDownload, invalidateSongAudio } from "../audio/audio.service";
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -122,6 +120,8 @@ export async function handleSongsRoutes(
       timestampSource: song.timestampSource,
       audioStatus: audio?.status ?? "none",
       audioError: audio?.error ?? null,
+      busy: isSongBusy(song, audio),
+      steps: loaderSteps(song, audio),
     });
   }
 
@@ -278,85 +278,27 @@ export async function handleSongsRoutes(
     }
   }
 
-  const chordTimestamp = /^\/chords\/([^/]+)\/timestamp(\/clear)?$/.exec(suffix);
-  if (chordTimestamp) {
-    const chordId = decodeURIComponent(chordTimestamp[1]!);
+  const lineTimestamp = /^\/lines\/([^/]+)\/timestamp(\/clear)?$/.exec(suffix);
+  if (lineTimestamp) {
+    const lineId = decodeURIComponent(lineTimestamp[1]!);
     const form = await readForm(request);
     if (!form) return badRequest("No se pudo leer la solicitud.");
-    if (chordTimestamp[2]) {
-      if (!clearChordTimestamp(db, songId, chordId)) return missingSong();
-      recordEdit(db, songId, "timestamp.clear", { chordId });
-      return json({ ok: true, timestampMs: null });
+    if (lineTimestamp[2]) {
+      if (!clearLineStart(db, songId, lineId)) return missingSong();
+      recordEdit(db, songId, "timestamp.clear", { lineId });
+      return json({ ok: true, startMs: null });
     }
     const raw = form.get("ms");
     const ms = typeof raw === "string" ? Number(raw) : Number.NaN;
     if (!Number.isSafeInteger(ms) || ms < 0 || ms > 24 * 60 * 60 * 1000) {
       return json({ error: "La marca de tiempo no es válida." }, 400);
     }
-    if (!setChordTimestamp(db, songId, chordId, ms, "manual")) return missingSong();
-    recordEdit(db, songId, "timestamp.set", { chordId, ms });
-    return json({ ok: true, timestampMs: ms });
+    if (!setLineStart(db, songId, lineId, ms, "manual")) return missingSong();
+    recordEdit(db, songId, "timestamp.set", { lineId, ms });
+    return json({ ok: true, startMs: ms });
   }
 
-  if (suffix === "/lines" && method === "POST") {
-    const form = await readForm(request);
-    if (!form) return badRequest("No se pudo leer la solicitud.");
-    const song = getSong(db, songId);
-    if (!song) return missingSong();
-    const guard = versionGuard(song, form);
-    if (guard) return guard;
-    if (song.lines.length >= MAX_LINES) {
-      return badRequest(`La canción no puede tener más de ${MAX_LINES} líneas.`);
-    }
-    const after = form.get("after");
-    const afterLineId = typeof after === "string" && after ? after : null;
-    if (afterLineId && !song.lines.some((line) => line.id === afterLineId)) {
-      return missingSong();
-    }
-    const isBreak = form.get("break") !== null;
-    addLine(db, song.id, afterLineId, isBreak);
-    bumpVersion(db, song.id);
-    recordEdit(db, song.id, isBreak ? "line.break" : "line.add", { afterLineId });
-    const updated = editorSong(db, song.id);
-    return updated ? editorResponse(updated) : missingSong();
-  }
-
-  const lineRoute = /^\/lines\/([^/]+)(\/delete)?$/.exec(suffix);
-  if (lineRoute) {
-    const lineId = decodeURIComponent(lineRoute[1]!);
-    const action = lineRoute[2] ?? "";
-    const form = await readForm(request);
-    if (!form) return badRequest("No se pudo leer la solicitud.");
-    const song = getSong(db, songId);
-    if (!song) return missingSong();
-    const line = song.lines.find((item) => item.id === lineId);
-    if (!line) return missingSong();
-    const guard = versionGuard(song, form);
-    if (guard) return guard;
-
-    if (action === "/delete") {
-      deleteLine(db, song.id, lineId);
-      bumpVersion(db, song.id);
-      recordEdit(db, song.id, "line.delete", { lineId });
-      const updated = editorSong(db, song.id);
-      return updated ? editorResponse(updated) : missingSong();
-    }
-
-    if (line.isBreak) return badRequest("Un salto de línea no admite texto.");
-    const text = validateChordProText(form.get("text"));
-    if (text === null) {
-      return badRequest(
-        "El texto de la línea no es válido: escribe siempre texto (acordes entre corchetes, p. ej. [Am]), revisa las marcas [Am@12.3] y los corchetes.",
-      );
-    }
-    updateLine(db, song.id, lineId, text);
-    bumpVersion(db, song.id);
-    recordEdit(db, song.id, "line.update", { lineId, text });
-    const updated = editorSong(db, song.id);
-    return updated ? editorResponse(updated) : missingSong();
-  }
-
-  if (suffix === "/meta") {
+  if (suffix === "/edit") {
     const form = await readForm(request);
     if (!form) return badRequest("No se pudo leer la solicitud.");
     const song = getSong(db, songId);
@@ -366,9 +308,12 @@ export async function handleSongsRoutes(
     const title = readTrimmedString(form.get("title"), 200)?.trim();
     const artist = readTrimmedString(form.get("artist"), 200)?.trim();
     if (!title || !artist) return badRequest("El título y el artista son obligatorios.");
+    const parsed = parseEditorText(form.get("text"));
+    if ("error" in parsed) return badRequest(parsed.error);
+    const result = replaceSongLines(db, song.id, parsed.lines);
     updateSongMeta(db, song.id, title, artist);
     bumpVersion(db, song.id);
-    recordEdit(db, song.id, "song.meta", { title, artist });
+    recordEdit(db, song.id, "song.edit", { title, artist, ...result });
     const updated = editorSong(db, song.id);
     return updated ? editorResponse(updated) : missingSong();
   }

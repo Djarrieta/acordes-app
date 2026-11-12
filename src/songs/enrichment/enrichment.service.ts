@@ -189,7 +189,7 @@ async function runAlignment(db: ReturnType<typeof getDb>, songId: string): Promi
       db,
       songId,
       "failed",
-      "Ningún video disponible tiene subtítulos utilizables. Elige otro candidato o marca los acordes a mano.",
+      "Ningún video disponible tiene subtítulos utilizables. Elige otro candidato o marca las líneas a mano.",
     );
     return;
   }
@@ -209,7 +209,7 @@ async function runAlignment(db: ReturnType<typeof getDb>, songId: string): Promi
       lines: song.lines.map((line) => ({
         id: line.id,
         lyric: line.lyric,
-        chords: line.chords.map((chord) => ({ index: chord.position, column: chord.column })),
+        chordCount: line.chords.length,
       })),
     },
     transcript.words,
@@ -223,7 +223,7 @@ async function runAlignment(db: ReturnType<typeof getDb>, songId: string): Promi
     recordEdit(db, songId, "timestamps.auto", {
       coverage: result.coverage,
       lineCoverage: result.lineCoverage,
-      chords: result.updates.length,
+      lines: result.updates.length,
     });
     return;
   }
@@ -234,7 +234,7 @@ async function runAlignment(db: ReturnType<typeof getDb>, songId: string): Promi
     "partial",
     `Cobertura baja (${Math.round(result.coverage * 100)} % de palabras, ${Math.round(
       result.lineCoverage * 100,
-    )} % de líneas). Revisa la letra o marca los acordes a mano.`,
+    )} % de líneas). Revisa la letra o marca las líneas a mano.`,
     result.coverage,
   );
   recordEdit(db, songId, "timestamps.partial", {

@@ -1,65 +1,30 @@
 import { escapeHtml } from "../render/html";
-import type { Song, SongCandidate, SongLine } from "./songs.model";
+import type { Song, SongCandidate } from "./songs.model";
+import { songToEditorText } from "./songs.service";
 
 function hiddenVersion(song: Song): string {
   return `<input type="hidden" name="version" value="${song.version}">`;
 }
 
-function lineActions(song: Song, line: SongLine): string {
-  const base = `/songs/${escapeHtml(song.id)}/lines`;
-  const saveButton = line.isBreak
-    ? ""
-    : `<button type="submit" class="secondary" form="edit-${escapeHtml(line.id)}">Guardar línea</button>`;
-  return `<div class="editor-line-actions">
-    ${saveButton}
-    <form hx-post="${base}" hx-target="#song-editor-body" hx-swap="innerHTML">
-      ${hiddenVersion(song)}
-      <input type="hidden" name="after" value="${escapeHtml(line.id)}">
-      <button type="submit" class="secondary">Añadir línea después</button>
-    </form>
-    <form hx-post="${base}" hx-target="#song-editor-body" hx-swap="innerHTML">
-      ${hiddenVersion(song)}
-      <input type="hidden" name="after" value="${escapeHtml(line.id)}">
-      <input type="hidden" name="break" value="1">
-      <button type="submit" class="secondary">Añadir salto de línea</button>
-    </form>
-    <form hx-post="${base}/${escapeHtml(line.id)}/delete" hx-target="#song-editor-body" hx-swap="innerHTML">
-      ${hiddenVersion(song)}
-      <button type="submit" class="secondary">Eliminar línea</button>
-    </form>
-  </div>`;
-}
-
 export function renderEditor(song: Song): string {
-  const lines = song.lines
-    .map((line) => {
-      const body = line.isBreak
-        ? `<p class="editor-break">Salto de línea</p>`
-        : `<form id="edit-${escapeHtml(line.id)}" class="editor-line-form" hx-post="/songs/${escapeHtml(song.id)}/lines/${escapeHtml(line.id)}" hx-target="#song-editor-body" hx-swap="innerHTML">
-          ${hiddenVersion(song)}
-          <textarea class="editor-line-textarea" name="text" rows="2" maxlength="2000" spellcheck="false" required aria-label="Letra y acordes de la línea ${line.position + 1}">${escapeHtml(line.text)}</textarea>
-        </form>`;
-      return `<section class="editor-line" data-line-id="${escapeHtml(line.id)}">
-        ${body}
-        ${lineActions(song, line)}
-      </section>`;
-    })
-    .join("");
-
+  const id = escapeHtml(song.id);
+  const rows = Math.max(12, Math.min(song.lines.length + 2, 40));
   return `<div class="song-editor-inner" data-song-version="${song.version}">
-    <p class="editor-hint">Escribe los acordes entre corchetes pegados a su palabra, p. ej. <code>[Am]Debajo de la [G]morera</code>. Las marcas de tiempo van dentro del acorde: <code>[Am@12.3]</code> (segundos). No escribas columnas.</p>
-    <form class="editor-meta" hx-post="/songs/${escapeHtml(song.id)}/meta" hx-target="#song-editor-body" hx-swap="innerHTML">
+    <p class="editor-hint">Edita la canción como texto: cada renglón es una línea y un renglón vacío deja un espacio. Escribe los acordes entre corchetes pegados a su palabra, p. ej. <code>[Am]Debajo de la [G]morera</code>. Las marcas de tiempo se asignan por línea desde el reproductor (Opciones → Marcas de tiempo); las líneas que no cambies conservan la suya.</p>
+    <form class="editor-form" hx-post="/songs/${id}/edit" hx-target="#song-editor-body" hx-swap="innerHTML">
       ${hiddenVersion(song)}
-      <label>Título <input name="title" value="${escapeHtml(song.title)}" maxlength="200" required></label>
-      <label>Artista <input name="artist" value="${escapeHtml(song.artist)}" maxlength="200" required></label>
-      <button type="submit" class="secondary">Guardar datos</button>
+      <div class="editor-meta">
+        <label>Título <input name="title" value="${escapeHtml(song.title)}" maxlength="200" required></label>
+        <label>Artista <input name="artist" value="${escapeHtml(song.artist)}" maxlength="200" required></label>
+      </div>
+      <label class="editor-text-label" for="song-editor-text">Letra y acordes</label>
+      <textarea id="song-editor-text" class="editor-text" name="text" rows="${rows}" wrap="off" spellcheck="false" autocapitalize="off" autocomplete="off" required>${escapeHtml(songToEditorText(song))}</textarea>
+      <div class="editor-actions">
+        <button type="submit">Guardar</button>
+        <button type="button" class="secondary" data-editor-discard>Descartar cambios</button>
+      </div>
     </form>
-    <div class="editor-lines">${lines}</div>
-    <form class="editor-add-line" hx-post="/songs/${escapeHtml(song.id)}/lines" hx-target="#song-editor-body" hx-swap="innerHTML">
-      ${hiddenVersion(song)}
-      <button type="submit" class="secondary">Añadir línea al final</button>
-    </form>
-    <form class="editor-refresh" hx-post="/songs/${escapeHtml(song.id)}/refresh" hx-target="#song-editor-body" hx-swap="innerHTML" hx-confirm="Se actualizarán las líneas no editadas manualmente. ¿Continuar?">
+    <form class="editor-refresh" hx-post="/songs/${id}/refresh" hx-target="#song-editor-body" hx-swap="innerHTML" hx-confirm="Se actualizarán las líneas no editadas manualmente. ¿Continuar?">
       ${hiddenVersion(song)}
       <button type="submit" class="secondary">Refrescar desde LaCuerda</button>
     </form>

@@ -137,8 +137,8 @@ describe("automatic timestamps", () => {
     const updated = getSong(db, song.id)!;
     expect(updated.video?.id).toBe("abcdefghijk");
     expect(updated.timestampsStatus).toBe("ready");
-    expect(updated.lines[0]!.chords[0]!.timestampMs).toBe(1000);
-    expect(updated.lines[0]!.chords[0]!.timestampSource).toBe("auto");
+    expect(updated.lines[0]!.startMs).toBe(1000);
+    expect(updated.lines[0]!.startSource).toBe("auto");
   });
 
   test("tries the next candidate when the best has no transcript", async () => {

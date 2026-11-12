@@ -1,37 +1,17 @@
 export type ChordProChord = {
   name: string;
   column: number;
-  timestampMs: number | null;
-  timestampManual: boolean;
   index: number;
 };
 
 export type ParsedChordProLine = { lyric: string; chords: ChordProChord[] };
 
 const CHORD_NAME = /^[A-Za-z0-9#b/().*+\-\s]{1,30}$/;
-const MAX_TIMESTAMP_SECONDS = 24 * 60 * 60;
 
-function parseToken(inner: string): { name: string; timestampMs: number | null; manual: boolean } | null {
-  const at = inner.indexOf("@");
-  const rawName = at === -1 ? inner : inner.slice(0, at);
-  const name = rawName.trim();
+function parseToken(inner: string): { name: string } | null {
+  const name = inner.trim();
   if (!name || !CHORD_NAME.test(name)) return null;
-  if (at === -1) return { name, timestampMs: null, manual: false };
-  let suffix = inner.slice(at + 1);
-  let manual = false;
-  if (suffix.endsWith("!")) {
-    manual = true;
-    suffix = suffix.slice(0, -1);
-  }
-  if (!/^\d+(\.\d{1,3})?$/.test(suffix)) return null;
-  const seconds = Number(suffix);
-  if (!Number.isFinite(seconds) || seconds < 0 || seconds > MAX_TIMESTAMP_SECONDS) return null;
-  return { name, timestampMs: Math.round(seconds * 1000), manual };
-}
-
-function formatSeconds(ms: number): string {
-  const raw = (ms / 1000).toFixed(3).replace(/0+$/, "").replace(/\.$/, ".0");
-  return raw.includes(".") ? raw : `${raw}.0`;
+  return { name };
 }
 
 function escapeLyric(lyric: string): string {
@@ -65,13 +45,7 @@ export function parseChordProLine(text: string): ParsedChordProLine {
       cursor = close + 1;
       continue;
     }
-    chords.push({
-      name: token.name,
-      column: lyric.length,
-      timestampMs: token.timestampMs,
-      timestampManual: token.manual,
-      index: chords.length,
-    });
+    chords.push({ name: token.name, column: lyric.length, index: chords.length });
     cursor = close + 1;
   }
   return { lyric, chords };
@@ -83,7 +57,7 @@ function unescape(value: string): string {
 
 export function serializeChordProLine(
   lyric: string,
-  chords: { name: string; column: number; timestampMs?: number | null; timestampManual?: boolean }[],
+  chords: { name: string; column: number }[],
 ): string {
   const sorted = chords
     .map((chord, order) => ({ ...chord, order }))
@@ -93,11 +67,7 @@ export function serializeChordProLine(
   for (const chord of sorted) {
     const column = Math.max(0, Math.min(chord.column, lyric.length));
     output += escapeLyric(lyric.slice(cursor, column));
-    const stamp =
-      chord.timestampMs === null || chord.timestampMs === undefined
-        ? ""
-        : `@${formatSeconds(chord.timestampMs)}${chord.timestampManual ? "!" : ""}`;
-    output += `[${chord.name}${stamp}]`;
+    output += `[${chord.name}]`;
     cursor = column;
   }
   output += escapeLyric(lyric.slice(cursor));
@@ -122,28 +92,4 @@ export function validateChordProLine(text: string, maxChords: number): ParsedCho
   const parsed = parseChordProLine(text);
   if (parsed.chords.length > maxChords) return null;
   return parsed;
-}
-
-export function setChordProTimestamp(
-  text: string,
-  chordIndex: number,
-  timestampMs: number | null,
-  manual = true,
-): string | null {
-  const parsed = parseChordProLine(text);
-  if (chordIndex < 0 || chordIndex >= parsed.chords.length) return null;
-  const target = parsed.chords[chordIndex]!;
-  const updated = parsed.chords.map((chord) =>
-    chord.index === chordIndex ? { ...chord, timestampMs, timestampManual: manual } : chord,
-  );
-  return serializeChordProLine(parsed.lyric, updated);
-}
-
-export function stripChordProTimestamps(text: string, onlyAuto = false): string {
-  const parsed = parseChordProLine(text);
-  const updated = parsed.chords.map((chord) => {
-    if (onlyAuto && chord.timestampManual) return chord;
-    return { ...chord, timestampMs: null, timestampManual: false };
-  });
-  return serializeChordProLine(parsed.lyric, updated);
 }

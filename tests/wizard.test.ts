@@ -8,11 +8,12 @@ describe("song wizard", () => {
     const page = await homePage().text();
 
     expect(page).toContain('aria-label="Pasos de la canción"');
-    expect(page).toContain('href="/public/styles.css?v=editor-7"');
-    expect(page).toContain('src="/public/youtube.js?v=24"');
+    expect(page).toContain('href="/public/styles.css?v=editor-10"');
+    expect(page).toContain('src="/public/youtube.js?v=26"');
     expect(page).toContain('src="/public/audio.js?v=14"');
     expect(page).toContain('data-wizard-step="2"');
     expect(page).toContain(">Busca</span>");
+    expect(page).toMatch(/window\.pauseAcordesPlayer\?\.\(\);\s*const searchPanel/);
     expect(page).toContain(">Reproducir</span>");
     expect(page).toContain('id="favorite-filter"');
     expect(page).not.toContain('value="De música ligera"');
@@ -35,15 +36,15 @@ describe("song wizard", () => {
             lyric: "Letra de prueba",
             isManual: false,
             isBreak: false,
+            startMs: null,
+            startSource: "none",
+            startConfidence: null,
             chords: [
               {
                 id: "chord-1",
                 position: 0,
                 name: "C",
                 column: 0,
-                timestampMs: null,
-                timestampSource: "none",
-                confidence: null,
               },
             ],
           },
@@ -111,15 +112,15 @@ describe("song wizard", () => {
             lyric: "Letra",
             isManual: false,
             isBreak: false,
+            startMs: null,
+            startSource: "none",
+            startConfidence: null,
             chords: [
               {
                 id: "chord-1",
                 position: 0,
                 name: "C",
                 column: 0,
-                timestampMs: null,
-                timestampSource: "none",
-                confidence: null,
               },
             ],
           },
@@ -146,15 +147,15 @@ describe("song wizard", () => {
             lyric: "Letra",
             isManual: false,
             isBreak: false,
+            startMs: null,
+            startSource: "none",
+            startConfidence: null,
             chords: [
               {
                 id: "chord-1",
                 position: 0,
                 name: "C",
                 column: 0,
-                timestampMs: null,
-                timestampSource: "none",
-                confidence: null,
               },
             ],
           },

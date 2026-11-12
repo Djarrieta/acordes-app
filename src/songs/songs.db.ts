@@ -1,16 +1,13 @@
 import { Database } from "bun:sqlite";
 import { newId, now, transaction } from "../db";
-import {
-  parseChordProLine,
-  setChordProTimestamp,
-  stripChordProTimestamps,
-} from "../parser/chordpro";
+import { parseChordProLine } from "../parser/chordpro";
 import type {
   Song,
   SongCandidate,
   SongChord,
   SongLine,
   SongTimestampSource,
+  TimestampSource,
   TimestampsStatus,
   TranscriptKind,
   VideoStatus,
@@ -50,6 +47,9 @@ type LineRow = {
   text: string;
   is_manual: number;
   is_break: number;
+  start_ms: number | null;
+  start_source: TimestampSource;
+  start_confidence: number | null;
 };
 
 type CandidateRow = {
@@ -68,15 +68,6 @@ export function chordIdFor(lineId: string, chordIndex: number): string {
   return `${lineId}:${chordIndex}`;
 }
 
-export function parseChordRef(chordId: string): { lineId: string; chordIndex: number } | null {
-  const separator = chordId.lastIndexOf(":");
-  if (separator <= 0) return null;
-  const lineId = chordId.slice(0, separator);
-  const chordIndex = Number(chordId.slice(separator + 1));
-  if (!Number.isInteger(chordIndex) || chordIndex < 0) return null;
-  return { lineId, chordIndex };
-}
-
 function mapLine(row: LineRow): SongLine {
   const parsed = parseChordProLine(row.text);
   const chords: SongChord[] = parsed.chords.map((chord) => ({
@@ -84,10 +75,6 @@ function mapLine(row: LineRow): SongLine {
     position: chord.index,
     name: chord.name,
     column: chord.column,
-    timestampMs: chord.timestampMs,
-    timestampSource:
-      chord.timestampMs === null ? "none" : chord.timestampManual ? "manual" : "auto",
-    confidence: null,
   }));
   return {
     id: row.id,
@@ -96,6 +83,9 @@ function mapLine(row: LineRow): SongLine {
     lyric: parsed.lyric,
     isManual: row.is_manual === 1,
     isBreak: row.is_break === 1,
+    startMs: row.start_ms,
+    startSource: row.start_source,
+    startConfidence: row.start_confidence,
     chords,
   };
 }
@@ -226,56 +216,103 @@ function assertSongLine(db: Database, songId: string, lineId: string): LineRow |
     .get(lineId, songId) as LineRow | null);
 }
 
-export function updateLine(
+/**
+ * Sustituye todas las líneas de la canción por `texts` (una entrada por línea, "" = línea en blanco).
+ * Las líneas que no cambian conservan su id y su marca de tiempo; las editadas (mismo tipo, en orden
+ * dentro del tramo modificado) también, para que corregir un acorde no borre los tiempos.
+ */
+export function replaceSongLines(
   db: Database,
   songId: string,
-  lineId: string,
-  text: string,
-  isManual = true,
-): void {
-  db.query(
-    "UPDATE song_lines SET text = ?, is_manual = ?, updated_at = ? WHERE id = ? AND song_id = ?",
-  ).run(text, isManual ? 1 : 0, now(), lineId, songId);
-}
-
-export function setLinePosition(
-  db: Database,
-  songId: string,
-  lineId: string,
-  target: number,
-): void {
-  const lines = db
-    .query("SELECT id, position FROM song_lines WHERE song_id = ? ORDER BY position ASC")
-    .all(songId) as { id: string; position: number }[];
-  const current = lines.findIndex((line) => line.id === lineId);
-  if (current === -1) return;
-  const clamped = Math.max(0, Math.min(target, lines.length - 1));
-  const [moved] = lines.splice(current, 1);
-  if (!moved) return;
-  lines.splice(clamped, 0, moved);
-
+  texts: string[],
+): { kept: number; added: number; removed: number } {
+  let kept = 0;
+  let added = 0;
+  let removed = 0;
   transaction(db, () => {
-    for (const [index, line] of lines.entries()) {
-      db.query("UPDATE song_lines SET position = ? WHERE id = ?").run(-(index + 1), line.id);
+    const old = db
+      .query("SELECT id, text FROM song_lines WHERE song_id = ? ORDER BY position ASC")
+      .all(songId) as { id: string; text: string }[];
+    const n = old.length;
+    const m = texts.length;
+    const width = m + 1;
+    const lcs = new Uint16Array((n + 1) * width);
+    for (let i = n - 1; i >= 0; i -= 1) {
+      for (let j = m - 1; j >= 0; j -= 1) {
+        lcs[i * width + j] = old[i]!.text === texts[j]
+          ? lcs[(i + 1) * width + j + 1]! + 1
+          : Math.max(lcs[(i + 1) * width + j]!, lcs[i * width + j + 1]!);
+      }
     }
-    for (const [index, line] of lines.entries()) {
-      db.query("UPDATE song_lines SET position = ?, updated_at = ? WHERE id = ?").run(
-        index,
-        now(),
-        line.id,
-      );
-    }
-  });
-}
 
-export function deleteLine(db: Database, songId: string, lineId: string): boolean {
-  const line = assertSongLine(db, songId, lineId);
-  if (!line) return false;
-  transaction(db, () => {
-    db.query("DELETE FROM song_lines WHERE id = ?").run(lineId);
-    renumberLines(db, songId);
+    const mapping: (number | null)[] = new Array(m).fill(null);
+    let gapOld: number[] = [];
+    let gapNew: number[] = [];
+    const flush = () => {
+      for (const blank of [false, true]) {
+        const oldIdx = gapOld.filter((index) => (old[index]!.text.trim() === "") === blank);
+        const newIdx = gapNew.filter((index) => (texts[index]!.trim() === "") === blank);
+        for (let k = 0; k < Math.min(oldIdx.length, newIdx.length); k += 1) {
+          mapping[newIdx[k]!] = oldIdx[k]!;
+        }
+      }
+      gapOld = [];
+      gapNew = [];
+    };
+    let i = 0;
+    let j = 0;
+    while (i < n && j < m) {
+      if (old[i]!.text === texts[j] && lcs[i * width + j] === lcs[(i + 1) * width + j + 1]! + 1) {
+        flush();
+        mapping[j] = i;
+        i += 1;
+        j += 1;
+      } else if (lcs[(i + 1) * width + j]! >= lcs[i * width + j + 1]!) {
+        gapOld.push(i);
+        i += 1;
+      } else {
+        gapNew.push(j);
+        j += 1;
+      }
+    }
+    while (i < n) gapOld.push(i++);
+    while (j < m) gapNew.push(j++);
+    flush();
+
+    const used = new Set(mapping.filter((index): index is number => index !== null));
+    for (const [index, line] of old.entries()) {
+      if (used.has(index)) continue;
+      db.query("DELETE FROM song_lines WHERE id = ?").run(line.id);
+      removed += 1;
+    }
+    for (const index of used) {
+      db.query("UPDATE song_lines SET position = ? WHERE id = ?").run(-(index + 1), old[index]!.id);
+    }
+    const timestamp = now();
+    for (const [position, text] of texts.entries()) {
+      const oldIndex = mapping[position];
+      if (oldIndex === null || oldIndex === undefined) {
+        db.query(
+          `INSERT INTO song_lines (id, song_id, position, text, is_manual, created_at, updated_at)
+           VALUES (?, ?, ?, ?, 1, ?, ?)`,
+        ).run(newId(), songId, position, text, timestamp, timestamp);
+        added += 1;
+        continue;
+      }
+      const previous = old[oldIndex]!;
+      if (previous.text === text) {
+        db.query("UPDATE song_lines SET position = ? WHERE id = ?").run(position, previous.id);
+        kept += 1;
+      } else {
+        db.query(
+          "UPDATE song_lines SET position = ?, text = ?, is_manual = 1, updated_at = ? WHERE id = ?",
+        ).run(position, text, timestamp, previous.id);
+        kept += 1;
+      }
+    }
+    recalcSongTimestampSource(db, songId);
   });
-  return true;
+  return { kept, added, removed };
 }
 
 function renumberLines(db: Database, songId: string): void {
@@ -290,89 +327,40 @@ function renumberLines(db: Database, songId: string): void {
   }
 }
 
-export function addLine(
+export function setLineStart(
   db: Database,
   songId: string,
-  afterLineId: string | null = null,
-  isBreak = false,
-): string {
-  const lines = db
-    .query("SELECT id FROM song_lines WHERE song_id = ? ORDER BY position ASC")
-    .all(songId) as { id: string }[];
-  const ids = lines.map((line) => line.id);
-  const at = afterLineId ? ids.indexOf(afterLineId) : -1;
-  const insertAt = at === -1 ? ids.length : at + 1;
-  const id = newId();
-  const timestamp = now();
-  transaction(db, () => {
-    for (const [index, lineId] of ids.entries()) {
-      db.query("UPDATE song_lines SET position = ? WHERE id = ?").run(-(index + 1), lineId);
-    }
-    db.query(
-      `INSERT INTO song_lines (id, song_id, position, text, is_manual, is_break, created_at, updated_at)
-       VALUES (?, ?, ?, '', 1, ?, ?, ?)`,
-    ).run(id, songId, insertAt, isBreak ? 1 : 0, timestamp, timestamp);
-    ids.splice(insertAt, 0, id);
-    for (const [index, lineId] of ids.entries()) {
-      db.query("UPDATE song_lines SET position = ?, updated_at = ? WHERE id = ?").run(
-        index,
-        now(),
-        lineId,
-      );
-    }
-  });
-  return id;
-}
-
-function rewriteLineText(db: Database, songId: string, lineId: string, text: string): boolean {
-  const line = assertSongLine(db, songId, lineId);
-  if (!line) return false;
-  db.query("UPDATE song_lines SET text = ?, updated_at = ? WHERE id = ? AND song_id = ?").run(
-    text,
-    now(),
-    lineId,
-    songId,
-  );
-  return true;
-}
-
-export function setChordTimestamp(
-  db: Database,
-  songId: string,
-  chordId: string,
-  timestampMs: number | null,
+  lineId: string,
+  startMs: number | null,
   source: "auto" | "manual",
 ): boolean {
-  const ref = parseChordRef(chordId);
-  if (!ref) return false;
-  const line = assertSongLine(db, songId, ref.lineId);
+  const line = assertSongLine(db, songId, lineId);
   if (!line) return false;
-  const next = setChordProTimestamp(line.text, ref.chordIndex, timestampMs, source === "manual");
-  if (next === null) return false;
-  rewriteLineText(db, songId, ref.lineId, next);
+  db.query(
+    `UPDATE song_lines
+     SET start_ms = ?, start_source = ?, start_confidence = NULL, updated_at = ?
+     WHERE id = ? AND song_id = ?`,
+  ).run(startMs, startMs === null ? "none" : source, now(), lineId, songId);
   recalcSongTimestampSource(db, songId);
   return true;
 }
 
-export function clearChordTimestamp(db: Database, songId: string, chordId: string): boolean {
-  return setChordTimestamp(db, songId, chordId, null, "manual");
+export function clearLineStart(db: Database, songId: string, lineId: string): boolean {
+  return setLineStart(db, songId, lineId, null, "manual");
 }
 
 export function clearAutoTimestamps(db: Database, songId: string): void {
-  const lines = db
-    .query("SELECT id, text FROM song_lines WHERE song_id = ?")
-    .all(songId) as { id: string; text: string }[];
-  for (const line of lines) {
-    const next = stripChordProTimestamps(line.text, true);
-    if (next !== line.text) rewriteLineText(db, songId, line.id, next);
-  }
+  db.query(
+    `UPDATE song_lines
+     SET start_ms = NULL, start_source = 'none', start_confidence = NULL
+     WHERE song_id = ? AND start_source = 'auto'`,
+  ).run(songId);
   recalcSongTimestampSource(db, songId);
 }
 
 export type AutoTimestampUpdate = {
   lineId: string;
-  chordIndex: number;
-  timestampMs: number;
+  startMs: number;
   confidence: number;
 };
 
@@ -383,36 +371,27 @@ export function applyAutoTimestamps(
 ): void {
   transaction(db, () => {
     for (const update of updates) {
-      const line = assertSongLine(db, songId, update.lineId);
-      if (!line) continue;
-      const parsed = parseChordProLine(line.text);
-      const target = parsed.chords[update.chordIndex];
-      if (!target || target.timestampManual) continue;
-      const next = setChordProTimestamp(
-        line.text,
-        update.chordIndex,
-        update.timestampMs,
-        false,
-      );
-      if (next !== null) rewriteLineText(db, songId, update.lineId, next);
+      db.query(
+        `UPDATE song_lines
+         SET start_ms = ?, start_source = 'auto', start_confidence = ?, updated_at = ?
+         WHERE id = ? AND song_id = ? AND start_source != 'manual'`,
+      ).run(update.startMs, update.confidence, now(), update.lineId, songId);
     }
     recalcSongTimestampSource(db, songId);
   });
 }
 
 export function recalcSongTimestampSource(db: Database, songId: string): void {
-  const lines = db
-    .query("SELECT text FROM song_lines WHERE song_id = ?")
-    .all(songId) as { text: string }[];
-  let manual = 0;
-  let auto = 0;
-  for (const line of lines) {
-    for (const chord of parseChordProLine(line.text).chords) {
-      if (chord.timestampMs === null) continue;
-      if (chord.timestampManual) manual += 1;
-      else auto += 1;
-    }
-  }
+  const counts = db
+    .query(
+      `SELECT start_source AS source, COUNT(*) AS total
+       FROM song_lines
+       WHERE song_id = ? AND start_ms IS NOT NULL
+       GROUP BY start_source`,
+    )
+    .all(songId) as { source: TimestampSource; total: number }[];
+  const manual = counts.find((row) => row.source === "manual")?.total ?? 0;
+  const auto = counts.find((row) => row.source === "auto")?.total ?? 0;
   const source: SongTimestampSource =
     manual > 0 && auto > 0 ? "mixed" : manual > 0 ? "manual" : auto > 0 ? "auto" : "none";
   db.query("UPDATE songs SET timestamp_source = ?, updated_at = ? WHERE id = ?").run(
@@ -452,13 +431,11 @@ export function setVideo(
 }
 
 export function clearAllTimestamps(db: Database, songId: string): void {
-  const lines = db
-    .query("SELECT id, text FROM song_lines WHERE song_id = ?")
-    .all(songId) as { id: string; text: string }[];
-  for (const line of lines) {
-    const next = stripChordProTimestamps(line.text);
-    if (next !== line.text) rewriteLineText(db, songId, line.id, next);
-  }
+  db.query(
+    `UPDATE song_lines
+     SET start_ms = NULL, start_source = 'none', start_confidence = NULL
+     WHERE song_id = ?`,
+  ).run(songId);
   db.query(
     `UPDATE songs
      SET timestamps_status = 'none', timestamps_error = NULL, timestamps_attempts = 0,

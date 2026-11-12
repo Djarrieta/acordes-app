@@ -3,6 +3,11 @@ document.addEventListener("click", (event) => {
   if (event.target.closest("[data-song-edit]")) {
     window.setSongView?.("editor");
   }
+  const discard = event.target.closest("[data-editor-discard]");
+  if (discard) {
+    const textarea = discard.closest("form")?.querySelector("textarea");
+    if (textarea) textarea.value = textarea.defaultValue;
+  }
 });
 
 document.addEventListener("htmx:afterSwap", (event) => {

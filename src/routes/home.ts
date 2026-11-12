@@ -8,9 +8,9 @@ export function homePage(): Response {
   <meta name="color-scheme" content="light">
   <title>Acordes — transpositor</title>
   <link rel="icon" href="data:,">
-  <link rel="stylesheet" href="/public/styles.css?v=editor-7">
+  <link rel="stylesheet" href="/public/styles.css?v=editor-10">
   <script src="https://unpkg.com/htmx.org@2.0.4"></script>
-  <script src="/public/youtube.js?v=24" defer></script>
+  <script src="/public/youtube.js?v=26" defer></script>
   <script src="/public/audio.js?v=14" defer></script>
   <script src="/public/editor.js?v=2" defer></script>
   <script>
@@ -91,6 +91,7 @@ export function homePage(): Response {
         } else if (view === "options") {
           window.setSongView?.("player");
         } else {
+          window.pauseAcordesPlayer?.();
           const searchPanel = document.getElementById("search-panel");
           const songContainer = document.getElementById("song-container");
           if (searchPanel) searchPanel.hidden = false;
@@ -235,7 +236,7 @@ export function homePage(): Response {
       </form>
       <div id="search-results" aria-live="polite"></div>
     </section>
-    <div id="song-loader" class="song-loader song-loader--page" role="status" aria-live="polite" hidden><span class="song-loader-spinner" aria-hidden="true"></span><span>Cargando…</span></div>
+    <div id="song-loader" class="song-loader song-loader--page song-loader--steps" role="status" aria-live="polite" hidden><p class="song-loader-title"><span class="song-loader-spinner" aria-hidden="true"></span><span>Preparando la canción…</span></p><ol class="loader-steps"><li class="loader-step is-active"><span class="loader-step-icon" aria-hidden="true"></span><span class="loader-step-label">Consultando La Cuerda…</span></li></ol></div>
     <div id="song-container" aria-live="polite" hidden></div>
   </main>
 </body>

@@ -1,5 +1,6 @@
 import { transposeChord } from "../transpose/chords";
 import type { SongAudio } from "../audio/audio.model";
+import { isSongBusy, loaderSteps, type LoaderStep } from "../songs/loader-steps";
 import type { Song, SongChord, SongLine } from "../songs/songs.model";
 import { escapeHtml } from "./html";
 
@@ -8,7 +9,6 @@ type PositionedChord = {
   chord: string;
   index: number;
   column: number;
-  timestampMs: number | null;
 };
 type WordRange = { start: number; end: number; chords: PositionedChord[] };
 
@@ -24,14 +24,7 @@ export function formatTimestampMs(ms: number): string {
 
 function renderChordButton(chord: PositionedChord): string {
   const label = escapeHtml(chord.chord);
-  const timeAttribute =
-    chord.timestampMs === null ? "" : ` data-chord-time="${chord.timestampMs}"`;
-  const marker = chord.timestampMs === null ? "" : formatTimestampMs(chord.timestampMs);
-  const timeTitle =
-    chord.timestampMs === null
-      ? ""
-      : ` title="Marca de reproducción: ${formatTimestampMs(chord.timestampMs)}"`;
-  return `<button type="button" class="chord-trigger" data-chord-id="${escapeHtml(chord.id)}" data-chord-index="${chord.index}" data-chord-name="${label}"${timeAttribute}${timeTitle} aria-label="Ver diagrama de ${label}" hx-get="/chord-diagram?chord=${encodeURIComponent(chord.chord)}" hx-target="#chord-viewer" hx-swap="innerHTML">${label}<span class="chord-time-marker" aria-hidden="true">${marker}</span></button>`;
+  return `<button type="button" class="chord-trigger" data-chord-id="${escapeHtml(chord.id)}" data-chord-index="${chord.index}" data-chord-column="${chord.column}" data-chord-name="${label}" aria-label="Ver diagrama de ${label}" hx-get="/chord-diagram?chord=${encodeURIComponent(chord.chord)}" hx-target="#chord-viewer" hx-swap="innerHTML">${label}</button>`;
 }
 
 function positionChords(
@@ -44,7 +37,6 @@ function positionChords(
     chord: transposeChord(chord.name, offset),
     index: firstChordIndex + index,
     column: chord.column,
-    timestampMs: chord.timestampMs,
   }));
 }
 
@@ -107,7 +99,11 @@ function renderSongLine(
     for (const word of words) parts.push(renderWord(word, line.lyric));
     content = parts.join(" ");
   }
-  return `<div class="song-line" data-lyric-index="${lineIndex}" data-line-id="${escapeHtml(line.id)}">
+  const startAttribute = line.startMs === null ? "" : ` data-line-start="${line.startMs}"`;
+  const marker = line.startMs === null ? "" : formatTimestampMs(line.startMs);
+  const title = line.startMs === null ? "" : ` title="Marca de línea: ${marker}"`;
+  return `<div class="song-line" data-lyric-index="${lineIndex}" data-line-id="${escapeHtml(line.id)}" data-lyric-length="${line.lyric.trim().length}"${startAttribute}${title}>
+    <span class="song-line-time" aria-hidden="true">${marker}</span>
     <span class="song-line-text">${content}</span>
   </div>`;
 }
@@ -118,8 +114,18 @@ function transpositionLabel(offset: number): string {
   return `${offset > 0 ? "+" : "-"}${amount} ${amount === 1 ? "semitono" : "semitonos"}`;
 }
 
-function isBusySong(song: Song): boolean {
-  return song.videoStatus === "searching" || ["pending", "transcribing", "aligning"].includes(song.timestampsStatus);
+function isBusySong(song: Song, audio: SongAudio | null = null): boolean {
+  return isSongBusy(song, audio);
+}
+
+export function renderLoaderSteps(steps: LoaderStep[]): string {
+  const items = steps
+    .map(
+      (step) =>
+        `<li class="loader-step is-${step.state}" data-loader-step="${escapeHtml(step.key)}"><span class="loader-step-icon" aria-hidden="true"></span><span class="loader-step-label">${escapeHtml(step.label)}</span></li>`,
+    )
+    .join("");
+  return `<ol class="loader-steps" data-loader-steps>${items}</ol>`;
 }
 
 function renderLoader(): string {
@@ -195,8 +201,8 @@ function renderVideoPanel(song: Song, searchQuery: string): string {
               <button type="button" class="secondary" data-timestamps-retry${!video ? " disabled" : ""}>Reintentar marcas</button>
             </div>
             ${statusMessage}
-            <button type="button" class="chord-mark-toggle" data-chord-mark-toggle aria-pressed="false" disabled>Activar marcas de acordes</button>
-            <p class="youtube-help">Con las marcas activadas, pulsa cada acorde mientras suena para asignarle el tiempo actual. Mantén pulsado un acorde para borrar su marca.</p>
+            <button type="button" class="chord-mark-toggle" data-chord-mark-toggle aria-pressed="false" disabled>Activar marcas de líneas</button>
+            <p class="youtube-help">Con las marcas activadas, pulsa cada línea justo cuando empieza a cantarse para asignarle el tiempo actual. Clic derecho sobre una línea borra su marca. El acorde que se muestra mientras suena se estima según su posición dentro de la línea.</p>
           </div>
         </div>
       </section>`;
@@ -237,12 +243,12 @@ export function renderSong(song: Song, offset: number, audio: SongAudio | null =
   const videoId = song.video ? escapeHtml(song.video.id) : "";
   const videoUrl = song.video ? escapeHtml(song.video.url) : "";
   const hasVideo = song.video ? "true" : "false";
-  const busy = isBusySong(song);
+  const busy = isBusySong(song, audio);
   const initialView = busy ? "loader" : "player";
 
   const main = busy
     ? `<div class="song-view song-view-loader" data-view-panel="loader" role="status" aria-live="polite">
-       <div class="song-loader"><span class="song-loader-spinner" aria-hidden="true"></span><span>Preparando la canción…</span></div>
+       <div class="song-loader song-loader--steps" data-song-loader><p class="song-loader-title"><span class="song-loader-spinner" aria-hidden="true"></span><span>Preparando la canción…</span></p>${renderLoaderSteps(loaderSteps(song, audio))}</div>
        <section class="youtube-section" hidden data-youtube-song="${id}" data-video-id="${videoId}" data-video-url="${videoUrl}" data-video-status="${song.videoStatus}" data-timestamps-status="${song.timestampsStatus}"></section>
      </div>`
     : `<div class="song-view song-view-player" data-view-panel="player">
@@ -272,6 +278,7 @@ export function renderSong(song: Song, offset: number, audio: SongAudio | null =
               <button type="button" class="audio-source-button${audioReady ? "" : " is-active"}" data-audio-source="youtube" aria-pressed="${audioReady ? "false" : "true"}" title="Escuchar el audio original">Original</button>
               <button type="button" class="audio-source-button${audioReady ? " is-active" : ""}" data-audio-source="transposed" aria-pressed="${audioReady ? "true" : "false"}"${audioReady ? "" : " disabled"} title="Escuchar el audio transpuesto">Transpuesto</button>
             </div>
+            <button type="button" class="secondary youtube-media-toggle" data-media-toggle aria-pressed="true" aria-label="Ocultar acorde y video" title="Mostrar u ocultar el acorde activo y el video">Acordes</button>
             <button type="button" class="secondary youtube-options-button" data-song-view="options">Opciones</button>
           </div>
           <p class="audio-source-status" data-audio-status-text role="status" aria-live="polite">${audioSourceLabel}</p>

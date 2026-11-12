@@ -47,15 +47,15 @@ describe("renderGuitarChordDiagram", () => {
             lyric: "Letra",
             isManual: false,
             isBreak: false,
+            startMs: null,
+            startSource: "none",
+            startConfidence: null,
             chords: [
               {
                 id: "chord-1",
                 position: 0,
                 name: "C",
                 column: 0,
-                timestampMs: null,
-                timestampSource: "none",
-                confidence: null,
               },
             ],
           },
@@ -81,9 +81,6 @@ describe("renderGuitarChordDiagram", () => {
       position: 0,
       name,
       column,
-      timestampMs: null,
-      timestampSource: "none" as const,
-      confidence: null,
     });
     const html = renderSong(
       makeSong({
@@ -95,6 +92,9 @@ describe("renderGuitarChordDiagram", () => {
             lyric: "Primera línea",
             isManual: false,
             isBreak: false,
+            startMs: null,
+            startSource: "none",
+            startConfidence: null,
             chords: [chord("chord-1", "C", 0), chord("chord-2", "G", 8)],
           },
           {
@@ -104,6 +104,9 @@ describe("renderGuitarChordDiagram", () => {
             lyric: "Segunda línea",
             isManual: false,
             isBreak: false,
+            startMs: null,
+            startSource: "none",
+            startConfidence: null,
             chords: [chord("chord-3", "C", 0)],
           },
         ],
@@ -111,9 +114,9 @@ describe("renderGuitarChordDiagram", () => {
       0,
     );
 
-    expect(html).toContain('data-chord-index="0" data-chord-name="Do"');
-    expect(html).toContain('data-chord-index="1" data-chord-name="Sol"');
-    expect(html).toContain('data-chord-index="2" data-chord-name="Do"');
+    expect(html).toContain('data-chord-index="0" data-chord-column="0" data-chord-name="Do"');
+    expect(html).toContain('data-chord-index="1" data-chord-column="8" data-chord-name="Sol"');
+    expect(html).toContain('data-chord-index="2" data-chord-column="0" data-chord-name="Do"');
   });
 
   test("serves selected voicing fragments and reports unknown chords", async () => {

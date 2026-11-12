@@ -1,7 +1,13 @@
-export const SCHEMA_VERSION = 1;
+export type Migration = { version: number; name: string; sql: string };
 
-export const SCHEMA_SQL = `
-CREATE TABLE IF NOT EXISTS songs (
+// Migraciones numeradas. Para cambiar el esquema, agrega una nueva al final;
+// no edites las ya publicadas.
+export const MIGRATIONS: Migration[] = [
+  {
+    version: 1,
+    name: "init",
+    sql: `
+CREATE TABLE songs (
   id                      TEXT PRIMARY KEY,
   source                  TEXT NOT NULL DEFAULT 'lacuerda',
   source_key              TEXT NOT NULL,
@@ -37,20 +43,23 @@ CREATE TABLE IF NOT EXISTS songs (
   UNIQUE (source, source_key)
 );
 
-CREATE TABLE IF NOT EXISTS song_lines (
+CREATE TABLE song_lines (
   id          TEXT PRIMARY KEY,
   song_id     TEXT NOT NULL REFERENCES songs(id) ON DELETE CASCADE,
   position    INTEGER NOT NULL,
   text        TEXT NOT NULL DEFAULT '',
   is_manual   INTEGER NOT NULL DEFAULT 0,
   is_break    INTEGER NOT NULL DEFAULT 0,
+  start_ms         INTEGER,
+  start_source     TEXT NOT NULL DEFAULT 'none',
+  start_confidence REAL,
   created_at  TEXT NOT NULL,
   updated_at  TEXT NOT NULL,
   UNIQUE (song_id, position)
 );
-CREATE INDEX IF NOT EXISTS idx_song_lines_song ON song_lines(song_id, position);
+CREATE INDEX idx_song_lines_song ON song_lines(song_id, position);
 
-CREATE TABLE IF NOT EXISTS song_transcripts (
+CREATE TABLE song_transcripts (
   id          TEXT PRIMARY KEY,
   song_id     TEXT NOT NULL REFERENCES songs(id) ON DELETE CASCADE,
   video_id    TEXT NOT NULL,
@@ -63,7 +72,7 @@ CREATE TABLE IF NOT EXISTS song_transcripts (
   UNIQUE (song_id, video_id, lang, kind)
 );
 
-CREATE TABLE IF NOT EXISTS song_video_candidates (
+CREATE TABLE song_video_candidates (
   id              TEXT PRIMARY KEY,
   song_id         TEXT NOT NULL REFERENCES songs(id) ON DELETE CASCADE,
   video_id        TEXT NOT NULL,
@@ -78,7 +87,7 @@ CREATE TABLE IF NOT EXISTS song_video_candidates (
   UNIQUE (song_id, video_id)
 );
 
-CREATE TABLE IF NOT EXISTS song_edits (
+CREATE TABLE song_edits (
   id         TEXT PRIMARY KEY,
   song_id    TEXT NOT NULL REFERENCES songs(id) ON DELETE CASCADE,
   actor      TEXT,
@@ -86,9 +95,9 @@ CREATE TABLE IF NOT EXISTS song_edits (
   payload    TEXT,
   created_at TEXT NOT NULL
 );
-CREATE INDEX IF NOT EXISTS idx_song_edits_song ON song_edits(song_id, created_at);
+CREATE INDEX idx_song_edits_song ON song_edits(song_id, created_at);
 
-CREATE TABLE IF NOT EXISTS song_audio (
+CREATE TABLE song_audio (
   song_id     TEXT PRIMARY KEY REFERENCES songs(id) ON DELETE CASCADE,
   video_id    TEXT NOT NULL,
   status      TEXT NOT NULL DEFAULT 'none',
@@ -100,4 +109,6 @@ CREATE TABLE IF NOT EXISTS song_audio (
   attempts    INTEGER NOT NULL DEFAULT 0,
   fetched_at  TEXT
 );
-`;
+`,
+  },
+];

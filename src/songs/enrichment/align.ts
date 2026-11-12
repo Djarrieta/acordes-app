@@ -1,10 +1,9 @@
 import type { TranscriptWord } from "./youtube.transcript";
 
-export type AlignChord = { index: number; column: number };
-export type AlignLine = { id: string; lyric: string; chords: AlignChord[] };
+export type AlignLine = { id: string; lyric: string; chordCount: number };
 export type AlignInput = { lines: AlignLine[] };
 
-export type AlignUpdate = { lineId: string; chordIndex: number; timestampMs: number; confidence: number };
+export type AlignUpdate = { lineId: string; startMs: number; confidence: number };
 export type AlignResult = {
   updates: AlignUpdate[];
   coverage: number;
@@ -17,9 +16,11 @@ export type AlignResult = {
 
 type LyricWord = {
   lineIndex: number;
-  start: number;
   normalized: string;
 };
+
+const DEFAULT_WORD_MS = 300;
+const MAX_LEAD_MS = 1500;
 
 const NOISE_LINE =
   /^(correcci[oó]n|tablatura|tab|acordes|intro|solo|puente|final|outro|repetir|bis|estribillo|coro|instrumental)\b/i;
@@ -125,7 +126,7 @@ export function alignLyrics(input: AlignInput, transcriptWords: TranscriptWord[]
       const normalized = normalizeWord(match[0]);
       if (!normalized) continue;
       const wordIndex = lyricWords.length;
-      lyricWords.push({ lineIndex, start: match.index, normalized });
+      lyricWords.push({ lineIndex, normalized });
       const list = wordsByLine.get(lineIndex) ?? [];
       list.push(wordIndex);
       wordsByLine.set(lineIndex, list);
@@ -137,65 +138,96 @@ export function alignLyrics(input: AlignInput, transcriptWords: TranscriptWord[]
   const totalWords = lyricWords.length;
   const coverage = totalWords === 0 ? 0 : matchedWords / totalWords;
 
-  const lineTimes = new Map<number, { start: number | null; end: number | null }>();
-  let alignedLines = 0;
-  for (const lineIndex of lyricLineIndexes) {
+  type LineTiming = {
+    start: number | null;
+    confidence: number;
+    words: number;
+    interpolated: boolean;
+  };
+  const timings: (LineTiming | null)[] = input.lines.map((line, lineIndex) => {
+    // Los saltos de línea (sin letra ni acordes) no participan.
+    if (!line.lyric.trim() && line.chordCount === 0) return null;
     const indexes = wordsByLine.get(lineIndex) ?? [];
-    let start: number | null = null;
-    let end: number | null = null;
-    for (const wordIndex of indexes) {
+    const hits: { time: number; position: number }[] = [];
+    indexes.forEach((wordIndex, position) => {
       const transcriptIndex = mapping[wordIndex];
-      if (transcriptIndex === null || transcriptIndex === undefined) continue;
-      const time = transcriptWords[transcriptIndex]!.startMs;
-      if (start === null || time < start) start = time;
-      if (end === null || time > end) end = time;
+      if (transcriptIndex === null || transcriptIndex === undefined) return;
+      hits.push({ time: transcriptWords[transcriptIndex]!.startMs, position });
+    });
+    const matched = hits.length;
+    const firstMatch = hits[0];
+    const lastMatch = hits[hits.length - 1];
+    if (!firstMatch || !lastMatch) {
+      return { start: null, confidence: 0, words: Math.max(indexes.length, 1), interpolated: false };
     }
-    lineTimes.set(lineIndex, { start, end });
-    if (start !== null) alignedLines += 1;
-  }
+    // Si las primeras palabras no casaron, retrocede lo que habrían tardado.
+    let wordMs = DEFAULT_WORD_MS;
+    if (lastMatch.position > firstMatch.position && lastMatch.time > firstMatch.time) {
+      wordMs = (lastMatch.time - firstMatch.time) / (lastMatch.position - firstMatch.position);
+    }
+    const lead = Math.min(firstMatch.position * wordMs, MAX_LEAD_MS);
+    return {
+      start: Math.max(0, Math.round(firstMatch.time - lead)),
+      confidence: indexes.length === 0 ? 0 : matched / indexes.length,
+      words: Math.max(indexes.length, 1),
+      interpolated: false,
+    };
+  });
 
   const totalLyricLines = lyricLineIndexes.size;
+  let alignedLines = 0;
+  for (const lineIndex of lyricLineIndexes) {
+    if (timings[lineIndex]?.start !== null && timings[lineIndex]?.start !== undefined) alignedLines += 1;
+  }
   const lineCoverage = totalLyricLines === 0 ? 0 : alignedLines / totalLyricLines;
 
-  const nearestLineTime = (lineIndex: number, direction: -1 | 1): number | null => {
-    for (let index = lineIndex + direction; index >= 0 && index < input.lines.length; index += direction) {
-      const times = lineTimes.get(index);
-      if (!times) continue;
-      const value = direction === -1 ? times.end : times.start;
-      if (value !== null) return value;
+  // Las líneas sin coincidencia (solo acordes, intros) se reparten entre sus
+  // vecinas con marca, ponderadas por número de palabras.
+  let previousIndex: number | null = null;
+  for (let index = 0; index < timings.length; index += 1) {
+    const timing = timings[index];
+    if (!timing) continue;
+    if (timing.start !== null) {
+      previousIndex = index;
+      continue;
     }
-    return null;
-  };
-
-  const updates: AlignUpdate[] = [];
-  input.lines.forEach((line, lineIndex) => {
-    if (line.chords.length === 0) return;
-    const times = lineTimes.get(lineIndex);
-    const wordIndexes = wordsByLine.get(lineIndex) ?? [];
-
-    for (const chord of line.chords) {
-      let timestamp: number | null = null;
-      for (const wordIndex of wordIndexes) {
-        const word = lyricWords[wordIndex]!;
-        if (word.start < chord.column) continue;
-        const transcriptIndex = mapping[wordIndex];
-        if (transcriptIndex === null || transcriptIndex === undefined) continue;
-        timestamp = transcriptWords[transcriptIndex]!.startMs;
+    let runEnd = index;
+    let nextIndex: number | null = null;
+    for (let probe = index; probe < timings.length; probe += 1) {
+      const candidate = timings[probe];
+      if (!candidate) continue;
+      if (candidate.start !== null) {
+        nextIndex = probe;
         break;
       }
-      if (timestamp === null && times) {
-        if (times.start !== null) timestamp = times.start;
-        else if (times.end !== null) timestamp = times.end;
-      }
-      if (timestamp === null) {
-        const previous = nearestLineTime(lineIndex, -1);
-        const next = nearestLineTime(lineIndex, 1);
-        if (previous !== null && next !== null) timestamp = Math.round((previous + next) / 2);
-        else timestamp = previous ?? next;
-      }
-      if (timestamp === null) continue;
-      updates.push({ lineId: line.id, chordIndex: chord.index, timestampMs: timestamp, confidence: coverage });
+      runEnd = probe;
     }
+    if (previousIndex === null || nextIndex === null) {
+      index = runEnd;
+      continue;
+    }
+    const before = timings[previousIndex]!;
+    const after = timings[nextIndex]!;
+    const run = timings.slice(index, runEnd + 1).filter((item): item is LineTiming => item !== null);
+    const total = before.words + run.reduce((sum, item) => sum + item.words, 0);
+    let accumulated = before.words;
+    for (const item of run) {
+      item.start = Math.round(before.start! + ((after.start! - before.start!) * accumulated) / total);
+      item.interpolated = true;
+      accumulated += item.words;
+    }
+    index = runEnd;
+  }
+
+  // Las marcas nunca retroceden.
+  let floor = 0;
+  const updates: AlignUpdate[] = [];
+  input.lines.forEach((line, lineIndex) => {
+    const timing = timings[lineIndex];
+    if (!timing || timing.start === null) return;
+    const startMs = Math.max(timing.start, floor);
+    floor = startMs;
+    updates.push({ lineId: line.id, startMs, confidence: timing.interpolated ? 0 : timing.confidence });
   });
 
   return {

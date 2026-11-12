@@ -2,11 +2,9 @@ import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import type { Database } from "bun:sqlite";
 import { openDatabase, setDb } from "../src/db";
 import {
-  addLine,
   applyAutoTimestamps,
   clearAllTimestamps,
   createSong,
-  deleteLine,
   findSongIdBySourceKey,
   getSong,
   isSongLiked,
@@ -17,9 +15,9 @@ import {
   listCandidates,
   refreshNonManualLines,
   replaceCandidates,
-  setChordTimestamp,
+  setLineStart,
   setVideo,
-  updateLine,
+  replaceSongLines,
 } from "../src/songs/songs.db";
 
 let db: Database;
@@ -61,74 +59,89 @@ describe("song repository", () => {
     expect(song.version).toBe(1);
   });
 
-  test("keeps manual timestamps when applying automatic ones", () => {
+  test("keeps manual line marks when applying automatic ones", () => {
     const song = seed();
-    const [first, second] = song.lines[0]!.chords;
-    const lineId = song.lines[0]!.id;
+    const first = song.lines[0]!.id;
+    const second = song.lines[1]!.id;
 
-    setChordTimestamp(db, song.id, first!.id, 900, "manual");
+    setLineStart(db, song.id, first, 900, "manual");
     applyAutoTimestamps(db, song.id, [
-      { lineId, chordIndex: 0, timestampMs: 1000, confidence: 0.9 },
-      { lineId, chordIndex: 1, timestampMs: 2000, confidence: 0.9 },
+      { lineId: first, startMs: 1000, confidence: 0.9 },
+      { lineId: second, startMs: 2000, confidence: 0.9 },
     ]);
 
     const updated = getSong(db, song.id)!;
-    expect(updated.lines[0]!.chords[0]!.timestampMs).toBe(900);
-    expect(updated.lines[0]!.chords[0]!.timestampSource).toBe("manual");
-    expect(updated.lines[0]!.chords[1]!.timestampMs).toBe(2000);
-    expect(updated.lines[0]!.chords[1]!.timestampSource).toBe("auto");
+    expect(updated.lines[0]!.startMs).toBe(900);
+    expect(updated.lines[0]!.startSource).toBe("manual");
+    expect(updated.lines[1]!.startMs).toBe(2000);
+    expect(updated.lines[1]!.startSource).toBe("auto");
     expect(updated.timestampSource).toBe("mixed");
-    expect(updated.lines[0]!.text).toContain("[C@0.9!]");
-    expect(updated.lines[0]!.text).toContain("[G@2.0]");
+    expect(updated.lines[0]!.text).toBe("[C]primera [G]linea");
   });
 
   test("clearAllTimestamps removes every mark when the video changes", () => {
     const song = seed();
-    const [first, second] = song.lines[0]!.chords;
 
-    setChordTimestamp(db, song.id, first!.id, 900, "manual");
-    setChordTimestamp(db, song.id, second!.id, 2000, "auto");
+    setLineStart(db, song.id, song.lines[0]!.id, 900, "manual");
+    setLineStart(db, song.id, song.lines[1]!.id, 2000, "auto");
     clearAllTimestamps(db, song.id);
 
     const updated = getSong(db, song.id)!;
-    expect(updated.lines[0]!.chords[0]!.timestampMs).toBeNull();
-    expect(updated.lines[0]!.chords[1]!.timestampMs).toBeNull();
-    expect(updated.lines[0]!.text).toBe("[C]primera [G]linea");
+    expect(updated.lines[0]!.startMs).toBeNull();
+    expect(updated.lines[1]!.startMs).toBeNull();
+    expect(updated.lines[0]!.startSource).toBe("none");
     expect(updated.timestampSource).toBe("none");
     expect(updated.timestampsStatus).toBe("none");
     expect(updated.timestampsAttempts).toBe(0);
   });
 
-  test("deletes lines with cascade", () => {
+  test("replaceSongLines keeps ids and marks of unchanged and edited lines", () => {
     const song = seed();
+    const [first, second] = song.lines;
+    setLineStart(db, song.id, first!.id, 1500, "manual");
+    setLineStart(db, song.id, second!.id, 4000, "manual");
 
-    expect(deleteLine(db, song.id, song.lines[1]!.id)).toBe(true);
+    const result = replaceSongLines(db, song.id, [
+      "[D]primera [G]linea",
+      "",
+      "[Am]segunda linea",
+      "[E]linea nueva",
+    ]);
+
     const updated = getSong(db, song.id)!;
-    expect(updated.lines).toHaveLength(1);
-    expect(updated.lines[0]!.position).toBe(0);
-  });
-
-  test("inserts lines between existing ones and creates empty breaks", () => {
-    const song = seed();
-    const middleId = addLine(db, song.id, song.lines[0]!.id);
-    const breakId = addLine(db, song.id, song.lines[0]!.id, true);
-
-    const updated = getSong(db, song.id)!;
-    expect(updated.lines.map((line) => line.id)).toEqual([
-      song.lines[0]!.id,
-      breakId,
-      middleId,
-      song.lines[1]!.id,
+    expect(updated.lines.map((line) => line.text)).toEqual([
+      "[D]primera [G]linea",
+      "",
+      "[Am]segunda linea",
+      "[E]linea nueva",
     ]);
     expect(updated.lines.map((line) => line.position)).toEqual([0, 1, 2, 3]);
-    expect(updated.lines[1]!.isBreak).toBe(true);
-    expect(updated.lines[1]!.text).toBe("");
-    expect(updated.lines[2]!.isBreak).toBe(false);
+    // La primera línea cambió de acorde pero conserva id y marca.
+    expect(updated.lines[0]!.id).toBe(first!.id);
+    expect(updated.lines[0]!.startMs).toBe(1500);
+    expect(updated.lines[0]!.isManual).toBe(true);
+    // La segunda no cambió: mismo id y marca.
+    expect(updated.lines[2]!.id).toBe(second!.id);
+    expect(updated.lines[2]!.startMs).toBe(4000);
+    expect(updated.lines[1]!.startMs).toBeNull();
+    expect(updated.lines[3]!.startMs).toBeNull();
+    expect(result).toEqual({ kept: 2, added: 2, removed: 0 });
+  });
+
+  test("replaceSongLines removes deleted lines and renumbers", () => {
+    const song = seed();
+    const result = replaceSongLines(db, song.id, ["[Am]segunda linea"]);
+
+    const updated = getSong(db, song.id)!;
+    expect(updated.lines).toHaveLength(1);
+    expect(updated.lines[0]!.id).toBe(song.lines[1]!.id);
+    expect(updated.lines[0]!.position).toBe(0);
+    expect(result.removed).toBe(1);
   });
 
   test("refresh keeps manual lines and replaces the rest", () => {
     const song = seed();
-    updateLine(db, song.id, song.lines[0]!.id, "[D]linea editada a mano", true);
+    replaceSongLines(db, song.id, ["[D]linea editada a mano", song.lines[1]!.text]);
 
     const result = refreshNonManualLines(db, song.id, {
       sourceKey: "/artista/cancion.shtml",

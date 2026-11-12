@@ -1196,41 +1196,40 @@ h1 {
   box-shadow: 0 0 0 2px #dfa437;
 }
 
-.chord-trigger.is-marking {
-  border-radius: 0.2rem;
-  background: #e8f0ea;
-  box-shadow: 0 0 0 1px #5b8069;
+.song-line {
+  position: relative;
 }
 
-.chord-time-marker {
+.song-line-time {
   position: absolute;
   z-index: 1;
-  top: -1.05rem;
-  left: 50%;
+  top: 0;
+  right: 0;
   display: none;
   border-radius: 0.25rem;
   background: #24543c;
   color: white;
   font-family: Inter, ui-sans-serif, system-ui, sans-serif;
-  font-size: 0.58rem;
+  font-size: 0.62rem;
   font-weight: 650;
   line-height: 1.2;
-  padding: 0.1rem 0.22rem;
-  transform: translateX(-50%);
+  padding: 0.1rem 0.28rem;
   white-space: nowrap;
 }
 
-.song-card:has(.youtube-section.is-marking:not(.is-playing)) .song-lyrics .chord-trigger[data-chord-time] .chord-time-marker {
+.song-card:has(.youtube-section.is-marking) .song-lyrics .song-line[data-line-start] .song-line-time {
   display: block;
+}
+
+.song-card:has(.youtube-section.is-marking) .song-lyrics .song-line {
+  cursor: crosshair;
+  box-shadow: inset 0 0 0 1px #c8dccf;
+  border-radius: 0.2rem;
 }
 
 .song-line.is-current {
   border-radius: 0.2rem;
   background: #f7f0dc;
-}
-
-.youtube-section.is-marking .chord-trigger[data-chord-index] {
-  cursor: crosshair;
 }
 
 .chord-trigger:focus-visible {
@@ -1776,8 +1775,7 @@ body.is-song-view .song-lyrics {
   grid-column: 1 / -1;
 }
 
-.editor-meta label,
-.editor-line-form label {
+.editor-meta label {
   display: grid;
   min-width: 0;
   gap: 0.35rem;
@@ -1793,64 +1791,6 @@ body.is-song-view .song-lyrics {
   font-weight: 400;
 }
 
-.editor-lines {
-  display: grid;
-  gap: 0.75rem;
-  margin: 1.25rem 0;
-}
-
-.editor-line {
-  min-width: 0;
-  overflow: hidden;
-  border: 1px solid #ece8de;
-  border-radius: 0.85rem;
-  background: #fcfaf5;
-  padding: 0.75rem;
-}
-
-.editor-line.is-manual {
-  border-color: #d9c98f;
-  background: #fffaf0;
-}
-
-.editor-line-form {
-  display: block;
-}
-
-.editor-line-textarea {
-  width: 100%;
-  min-width: 0;
-  border: none;
-  background: white;
-  padding: 0.55rem 0.65rem;
-  font: inherit;
-  font-weight: 400;
-  resize: vertical;
-}
-
-.editor-line-actions {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-  gap: 0.5rem;
-  margin-top: 0.5rem;
-}
-
-.editor-line-actions form {
-  min-width: 0;
-}
-
-.editor-line-actions button {
-  width: 100%;
-  padding: 0.55rem 0.7rem;
-  font-size: 0.8rem;
-}
-
-@media (max-width: 640px) {
-  .editor-line-actions {
-    grid-template-columns: 1fr;
-  }
-}
-
 .sr-only {
   position: absolute;
   width: 1px;
@@ -1861,15 +1801,6 @@ body.is-song-view .song-lyrics {
   clip: rect(0 0 0 0);
   white-space: nowrap;
   border: 0;
-}
-
-.editor-break {
-  margin: 0;
-  padding: 0.55rem 0.7rem;
-  border: 1px dashed #cfc8ba;
-  border-radius: 0.55rem;
-  color: #8a8272;
-  font-style: italic;
 }
 
 .timestamps-warning {
@@ -1892,12 +1823,6 @@ body.is-song-view .song-lyrics {
 
 
 
-.editor-line-form button {
-  flex: 0 0 auto;
-  padding: 0.55rem 0.7rem;
-  font-size: 0.8rem;
-}
-
 button.secondary {
   border: 1px solid #d6d1c6;
   background: transparent;
@@ -1918,10 +1843,6 @@ button.danger {
 button.danger:hover {
   background: #fbeeea;
   box-shadow: none;
-}
-
-.editor-add-line {
-  width: 100%;
 }
 
 .video-current {
@@ -2041,3 +1962,140 @@ button.danger:hover {
 }
 
 
+
+.song-loader--steps {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0.9rem;
+  padding: 1.25rem;
+}
+
+.song-loader-title {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.65rem;
+  margin: 0;
+  color: #3f3c36;
+  font-weight: 600;
+}
+
+.loader-steps {
+  display: grid;
+  gap: 0.55rem;
+  margin: 0 auto;
+  padding: 0;
+  list-style: none;
+  width: min(100%, 22rem);
+}
+
+.loader-step {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  color: #8a867c;
+  font-size: 0.9rem;
+  transition: color 200ms ease;
+}
+
+.loader-step-icon {
+  flex: none;
+  display: inline-grid;
+  place-items: center;
+  width: 1.1rem;
+  height: 1.1rem;
+  border: 2px solid #d6d1c6;
+  border-radius: 50%;
+  font-size: 0.7rem;
+  line-height: 1;
+}
+
+.loader-step.is-active {
+  color: #26231e;
+  font-weight: 600;
+}
+
+.loader-step.is-active .loader-step-icon {
+  border-color: #d6d1c6;
+  border-top-color: #2f684d;
+  animation: search-spin 700ms linear infinite;
+}
+
+.loader-step.is-done {
+  color: #2f684d;
+}
+
+.loader-step.is-done .loader-step-icon {
+  border-color: #2f684d;
+  background: #2f684d;
+  color: #fff;
+}
+
+.loader-step.is-done .loader-step-icon::before {
+  content: "✓";
+}
+
+.loader-step.is-failed {
+  color: #8a5a1f;
+}
+
+.loader-step.is-failed .loader-step-icon {
+  border-color: #c58a3a;
+}
+
+.loader-step.is-failed .loader-step-icon::before {
+  content: "–";
+}
+
+/* Oculta el acorde activo y el video sin desmontar el reproductor (el audio sigue sonando). */
+.song-card.is-media-collapsed .youtube-media-pair {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  border: 0;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.youtube-media-toggle[aria-pressed="false"] {
+  background: #eef4ef;
+  border-color: #2f684d;
+  color: #2f684d;
+}
+
+.editor-form {
+  display: grid;
+  gap: 0.6rem;
+  margin-top: 0.75rem;
+}
+
+.editor-text-label {
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.editor-text {
+  width: 100%;
+  min-height: 14rem;
+  border: 1px solid #d6d1c6;
+  border-radius: 0.65rem;
+  background: #fff;
+  padding: 0.75rem;
+  font: 0.9rem/1.5 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  resize: vertical;
+  overflow: auto;
+  white-space: pre;
+}
+
+.editor-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.editor-refresh {
+  margin-top: 1.25rem;
+}

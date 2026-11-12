@@ -4,7 +4,7 @@ import { openDatabase, setDb } from "../src/db";
 import {
   createSong,
   getSong,
-  setChordTimestamp,
+  setLineStart,
   setVideo,
 } from "../src/songs/songs.db";
 import {
@@ -75,23 +75,22 @@ describe("automatic timestamps", () => {
     const updated = getSong(db, song.id)!;
     expect(updated.timestampsStatus).toBe("ready");
     expect(updated.timestampSource).toBe("auto");
-    expect(updated.lines[0]!.chords.map((chord) => chord.timestampMs)).toEqual([1000, 1200]);
-    expect(updated.lines[1]!.chords[0]!.timestampMs).toBe(3000);
-    expect(updated.lines[0]!.text).toContain("[C@1.0]");
+    expect(updated.lines.map((line) => line.startMs)).toEqual([1000, 3000]);
+    expect(updated.lines[0]!.startSource).toBe("auto");
+    expect(updated.lines[0]!.text).toBe("[C]primera [G]linea");
   });
 
   test("does not overwrite manual marks when regenerating", async () => {
-    const chordId = song.lines[0]!.chords[0]!.id;
-    setChordTimestamp(db, song.id, chordId, 777, "manual");
+    setLineStart(db, song.id, song.lines[0]!.id, 777, "manual");
     setEnrichmentProvidersForTests({ transcript: async () => transcript });
 
     enqueueAlignment(song.id, db, true);
     await waitForEnrichment();
 
     const updated = getSong(db, song.id)!;
-    expect(updated.lines[0]!.chords[0]!.timestampMs).toBe(777);
-    expect(updated.lines[0]!.chords[0]!.timestampSource).toBe("manual");
-    expect(updated.lines[0]!.chords[1]!.timestampMs).toBe(1200);
+    expect(updated.lines[0]!.startMs).toBe(777);
+    expect(updated.lines[0]!.startSource).toBe("manual");
+    expect(updated.lines[1]!.startMs).toBe(3000);
     expect(updated.timestampSource).toBe("mixed");
     expect(updated.timestampsStatus).toBe("ready");
   });
@@ -106,7 +105,7 @@ describe("automatic timestamps", () => {
     expect(updated.timestampsStatus).toBe("failed");
     expect(updated.timestampsError).toContain("subtítulos");
     expect(updated.timestampsAttempts).toBe(1);
-    expect(updated.lines[0]!.chords[0]!.timestampMs).toBeNull();
+    expect(updated.lines[0]!.startMs).toBeNull();
   });
 
   test("does not apply timestamps when coverage is too low", async () => {
@@ -124,6 +123,6 @@ describe("automatic timestamps", () => {
 
     const updated = getSong(db, song.id)!;
     expect(updated.timestampsStatus).toBe("partial");
-    expect(updated.lines[0]!.chords[0]!.timestampMs).toBeNull();
+    expect(updated.lines[0]!.startMs).toBeNull();
   });
 });

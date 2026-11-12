@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import type { Database } from "bun:sqlite";
 import { openDatabase, setDb } from "../src/db";
 import { resetRateLimits } from "../src/core/ratelimit";
-import { createSong, getSong, setChordTimestamp, setVideoStatus } from "../src/songs/songs.db";
+import { createSong, getSong, setLineStart, setVideoStatus } from "../src/songs/songs.db";
 import {
   resetEnrichmentProviders,
   setEnrichmentProvidersForTests,
@@ -108,142 +108,107 @@ describe("song routes", () => {
     expect(payload.version).toBe(1);
   });
 
-  test("sets and clears a manual chord timestamp", async () => {
-    const chordId = song.lines[0]!.chords[0]!.id;
+  test("sets and clears a manual line timestamp", async () => {
+    const lineId = song.lines[0]!.id;
     const set = await route(
-      request(`/songs/${song.id}/chords/${chordId}/timestamp`, "POST", { ms: "42000" }),
+      request(`/songs/${song.id}/lines/${lineId}/timestamp`, "POST", { ms: "42000" }),
     );
     expect(set.status).toBe(200);
-    expect(getSong(db, song.id)!.lines[0]!.chords[0]!.timestampMs).toBe(42000);
-    expect(getSong(db, song.id)!.lines[0]!.text).toContain("[C@42.0!]");
+    expect(getSong(db, song.id)!.lines[0]!.startMs).toBe(42000);
+    expect(getSong(db, song.id)!.lines[0]!.startSource).toBe("manual");
+    expect(getSong(db, song.id)!.lines[0]!.text).toBe("[C]primera [G]linea");
     expect(getSong(db, song.id)!.timestampSource).toBe("manual");
 
     const clear = await route(
-      request(`/songs/${song.id}/chords/${chordId}/timestamp/clear`, "POST", {}),
+      request(`/songs/${song.id}/lines/${lineId}/timestamp/clear`, "POST", {}),
     );
     expect(clear.status).toBe(200);
-    expect(getSong(db, song.id)!.lines[0]!.chords[0]!.timestampMs).toBeNull();
+    expect(getSong(db, song.id)!.lines[0]!.startMs).toBeNull();
   });
 
-  test("rejects invalid timestamps and unknown chords", async () => {
+  test("rejects invalid timestamps and unknown lines", async () => {
     const bad = await route(
-      request(`/songs/${song.id}/chords/${song.lines[0]!.chords[0]!.id}/timestamp`, "POST", {
+      request(`/songs/${song.id}/lines/${song.lines[0]!.id}/timestamp`, "POST", {
         ms: "-5",
       }),
     );
     expect(bad.status).toBe(400);
 
     const unknown = await route(
-      request(`/songs/${song.id}/chords/00000000-0000-0000-0000-000000000000/timestamp`, "POST", {
+      request(`/songs/${song.id}/lines/00000000-0000-0000-0000-000000000000/timestamp`, "POST", {
         ms: "1000",
       }),
     );
     expect(unknown.status).toBe(404);
   });
 
-  test("updates a line and detects stale editor versions", async () => {
-    const lineId = song.lines[0]!.id;
+  test("renders the editor as a single text area with the whole song", async () => {
+    const response = await route(request(`/songs/${song.id}/edit`));
+    const html = await response.text();
+
+    expect(response.status).toBe(200);
+    expect(html).toContain('name="text"');
+    expect(html).toContain("[C]primera [G]linea\n[Am]segunda linea</textarea>");
+    expect(html).not.toContain("Añadir línea");
+    expect(html).not.toContain("Guardar línea");
+    expect(html).not.toContain("Eliminar línea");
+  });
+
+  test("saves the edited text, keeps line marks and detects stale versions", async () => {
+    setLineStart(db, song.id, song.lines[1]!.id, 7000, "manual");
     const ok = await route(
-      request(`/songs/${song.id}/lines/${lineId}`, "POST", {
+      request(`/songs/${song.id}/edit`, "POST", {
         version: "1",
-        text: "[D]linea editada",
+        title: "Nuevo título",
+        artist: "Artista",
+        text: "[D]primera [E]linea\n\n[Am]segunda linea\n[F]tercera\n\n",
       }),
     );
     expect(ok.status).toBe(200);
-    expect(getSong(db, song.id)!.version).toBe(2);
-    expect(getSong(db, song.id)!.lines[0]!.text).toBe("[D]linea editada");
-    expect(getSong(db, song.id)!.lines[0]!.lyric).toBe("linea editada");
+    const saved = getSong(db, song.id)!;
+    expect(saved.version).toBe(2);
+    expect(saved.title).toBe("Nuevo título");
+    expect(saved.lines.map((line) => line.text)).toEqual([
+      "[D]primera [E]linea",
+      "",
+      "[Am]segunda linea",
+      "[F]tercera",
+    ]);
+    expect(saved.lines[0]!.chords[1]!.name).toBe("E");
+    expect(saved.lines[2]!.startMs).toBe(7000);
 
     const stale = await route(
-      request(`/songs/${song.id}/lines/${lineId}`, "POST", {
+      request(`/songs/${song.id}/edit`, "POST", {
         version: "1",
+        title: "Otro",
+        artist: "Artista",
         text: "[E]otra edicion",
       }),
     );
     expect(stale.status).toBe(409);
-    expect(getSong(db, song.id)!.lines[0]!.text).toBe("[D]linea editada");
+    expect(getSong(db, song.id)!.lines).toHaveLength(4);
   });
 
-  test("requires text to save a line", async () => {
-    const lineId = song.lines[0]!.id;
-    const empty = await route(
-      request(`/songs/${song.id}/lines/${lineId}`, "POST", { version: "1", text: "   " }),
-    );
+  test("rejects invalid text and reports the offending line", async () => {
+    const post = (text: string) =>
+      route(request(`/songs/${song.id}/edit`, "POST", { version: "1", title: "T", artist: "A", text }));
+
+    const empty = await post("  \n \n");
     expect(empty.status).toBe(400);
-    expect(getSong(db, song.id)!.lines[0]!.text).toBe("[C]primera [G]linea");
-  });
 
-  test("adds lines and breaks between lines from the editor", async () => {
-    const lineId = song.lines[0]!.id;
-    const added = await route(
-      request(`/songs/${song.id}/lines`, "POST", { version: "1", after: lineId }),
-    );
-    expect(added.status).toBe(200);
-    const afterAdd = getSong(db, song.id)!;
-    expect(afterAdd.lines).toHaveLength(3);
-    expect(afterAdd.lines[1]!.text).toBe("");
-    expect(afterAdd.lines[1]!.isBreak).toBe(false);
+    const unclosed = await post("[C]bien\n[D texto");
+    expect(unclosed.status).toBe(400);
+    expect(await unclosed.text()).toContain("línea 2");
 
-    const html = await added.text();
-    expect(html).toContain("Añadir línea después");
-    expect(html).toContain("Añadir salto de línea");
-    expect(html).not.toContain('name="position"');
-
-    const brk = await route(
-      request(`/songs/${song.id}/lines`, "POST", {
-        version: String(afterAdd.version),
-        after: lineId,
-        break: "1",
-      }),
-    );
-    expect(brk.status).toBe(200);
-    const withBreak = getSong(db, song.id)!;
-    expect(withBreak.lines[1]!.isBreak).toBe(true);
-    expect(withBreak.lines[1]!.text).toBe("");
-    const breakHtml = await brk.text();
-    expect(breakHtml).toContain("Salto de línea");
-  });
-
-  test("validates inline chord text in the editor", async () => {
-    const lineId = song.lines[0]!.id;
-    const badName = await route(
-      request(`/songs/${song.id}/lines/${lineId}`, "POST", {
-        version: "1",
-        text: "[<script>]texto",
-      }),
-    );
+    const badName = await post("[<script>]texto");
     expect(badName.status).toBe(400);
 
-    const unclosed = await route(
-      request(`/songs/${song.id}/lines/${lineId}`, "POST", {
-        version: "1",
-        text: "[D texto",
-      }),
-    );
-    expect(unclosed.status).toBe(400);
-
-    const badStamp = await route(
-      request(`/songs/${song.id}/lines/${lineId}`, "POST", {
-        version: "1",
-        text: "[D@abc]texto",
-      }),
-    );
-    expect(badStamp.status).toBe(400);
-
-    const ok = await route(
-      request(`/songs/${song.id}/lines/${lineId}`, "POST", {
-        version: "1",
-        text: "[D]primera [E@3.5]linea",
-      }),
-    );
-    expect(ok.status).toBe(200);
-    expect(getSong(db, song.id)!.lines[0]!.chords).toHaveLength(2);
-    expect(getSong(db, song.id)!.lines[0]!.chords[1]!.timestampMs).toBe(3500);
+    expect(getSong(db, song.id)!.lines[0]!.text).toBe("[C]primera [G]linea");
+    expect(getSong(db, song.id)!.version).toBe(1);
   });
 
   test("requires confirmation before replacing a video and clears timestamps", async () => {
-    const chordId = song.lines[0]!.chords[0]!.id;
-    setChordTimestamp(db, song.id, chordId, 1000, "manual");
+    setLineStart(db, song.id, song.lines[0]!.id, 1000, "manual");
 
     const first = await route(
       request(`/songs/${song.id}/video`, "POST", { videoId: "abcdefghijk" }),
@@ -255,7 +220,7 @@ describe("song routes", () => {
     );
     expect(conflict.status).toBe(409);
     expect(getSong(db, song.id)!.video?.id).toBe("abcdefghijk");
-    expect(getSong(db, song.id)!.lines[0]!.chords[0]!.timestampMs).toBe(1000);
+    expect(getSong(db, song.id)!.lines[0]!.startMs).toBe(1000);
 
     const confirmed = await route(
       request(`/songs/${song.id}/video`, "POST", {
@@ -265,7 +230,7 @@ describe("song routes", () => {
     );
     expect(confirmed.status).toBe(200);
     expect(getSong(db, song.id)!.video?.id).toBe("lmnopqrstuv");
-    expect(getSong(db, song.id)!.lines[0]!.chords[0]!.timestampMs).toBeNull();
+    expect(getSong(db, song.id)!.lines[0]!.startMs).toBeNull();
     await waitForEnrichment();
   });
 

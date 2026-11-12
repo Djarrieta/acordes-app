@@ -79,21 +79,6 @@ export function readTrimmedString(value: unknown, max = MAX_WRITE_LENGTH): strin
   return value;
 }
 
-export function validateLineText(value: unknown): string | null {
-  if (typeof value !== "string") return null;
-  const text = value.replace(/\r\n?/g, "\n");
-  if (text.length > MAX_LINE_LENGTH) return null;
-  return text;
-}
-
-export function validateChordProText(value: unknown): string | null {
-  if (typeof value !== "string") return null;
-  if (value.length > MAX_LINE_LENGTH) return null;
-  if (!value.trim()) return null;
-  if (!validateChordProLine(value, MAX_CHORDS_PER_LINE)) return null;
-  return value;
-}
-
 export function readVersion(value: unknown): number | null {
   if (typeof value !== "string" || !/^\d+$/.test(value)) return null;
   const version = Number(value);
@@ -102,4 +87,34 @@ export function readVersion(value: unknown): number | null {
 
 export function currentSong(id: string, db: Database = getDb()): Song | null {
   return getSong(db, id);
+}
+
+export type EditorTextResult = { lines: string[] } | { error: string };
+
+/** Convierte el texto del editor (una línea por renglón, ChordPro) en las líneas de la canción. */
+export function parseEditorText(value: unknown): EditorTextResult {
+  if (typeof value !== "string") return { error: "Falta el texto de la canción." };
+  const lines = value.replace(/\r\n?/g, "\n").split("\n").map((line) => line.trimEnd());
+  while (lines.length > 0 && lines[lines.length - 1] === "") lines.pop();
+  while (lines.length > 0 && lines[0] === "") lines.shift();
+  if (lines.length === 0) return { error: "La canción no puede quedar vacía." };
+  if (lines.length > MAX_LINES) {
+    return { error: `La canción no puede tener más de ${MAX_LINES} líneas.` };
+  }
+  for (const [index, line] of lines.entries()) {
+    const number = index + 1;
+    if (line.length > MAX_LINE_LENGTH) {
+      return { error: `La línea ${number} es demasiado larga (máximo ${MAX_LINE_LENGTH} caracteres).` };
+    }
+    if (line !== "" && !validateChordProLine(line, MAX_CHORDS_PER_LINE)) {
+      return {
+        error: `La línea ${number} no es válida: revisa los corchetes de los acordes (p. ej. [Am]) y que no pase de ${MAX_CHORDS_PER_LINE} acordes.`,
+      };
+    }
+  }
+  return { lines };
+}
+
+export function songToEditorText(song: Song): string {
+  return song.lines.map((line) => line.text).join("\n");
 }

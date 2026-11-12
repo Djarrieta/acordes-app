@@ -16,9 +16,6 @@ export type SongChord = {
   position: number;
   name: string;
   column: number;
-  timestampMs: number | null;
-  timestampSource: TimestampSource;
-  confidence: number | null;
 };
 
 export type SongLine = {
@@ -28,6 +25,10 @@ export type SongLine = {
   lyric: string;
   isManual: boolean;
   isBreak: boolean;
+  /** Marca de línea: instante (ms) en que la línea empieza en el video. */
+  startMs: number | null;
+  startSource: TimestampSource;
+  startConfidence: number | null;
   chords: SongChord[];
 };
 
