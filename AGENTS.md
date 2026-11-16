@@ -7,6 +7,15 @@
 - No guardes secretos ni el archivo `.env`; `.env.example` contiene los valores de ejemplo.
 - Consulta [README.md](./README.md) para instalación, ejecución y estructura del proyecto.
 
+## Base de datos
+
+- **No hay retrocompatibilidad.** Los datos no son importantes y la base se puede
+  borrar (`bun run db:reset`) tantas veces como haga falta. No crees copias de
+  seguridad ni migraciones incrementales.
+- El esquema vigente está en `src/db/schema.ts`. Al cambiarlo, incrementa
+  `SCHEMA_VERSION` en `src/db.ts`: si la base existente tiene otra versión, la app
+  la elimina y la recrea al arrancar.
+
 ## Producción (Docker + Cloudflare)
 
 **No hay entorno dev/prod separado: todo es producción (POC).** La app está

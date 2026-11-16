@@ -7,7 +7,6 @@
     "start": "bun src/index.ts",
     "test": "bun test",
     "typecheck": "tsc --noEmit",
-    "db:backup": "bun scripts/db-backup.ts",
     "db:reset": "bun scripts/db-reset.ts"
   },
   "devDependencies": {

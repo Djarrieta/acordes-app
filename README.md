@@ -48,12 +48,17 @@ docker compose up --build
 
 La base de datos se guarda en `./data/app.sqlite` mediante un volumen de Compose. La imagen instala la última versión de `yt-dlp` para las marcas automáticas.
 
-Copias de seguridad y reinicio de la base:
+Reinicio de la base:
 
 ```sh
-bun run db:backup   # crea data/backup-AAAAMMDDTHHMMSS.sqlite con VACUUM INTO
-bun run db:reset    # elimina la base local (no la copia)
+bun run db:reset   # elimina data/app.sqlite (y sus archivos WAL/SHM)
 ```
+
+La base se puede borrar en cualquier momento: los datos no son importantes y no
+se hacen copias de seguridad. El esquema vive en `src/db/schema.ts`; al cambiarlo
+se incrementa `SCHEMA_VERSION` en `src/db.ts` y, si la base existente tiene otra
+versión, la aplicación la elimina y la recrea automáticamente al arrancar. No hay
+migraciones incrementales ni compatibilidad hacia atrás.
 
 La aplicación quedará disponible en <http://127.0.0.1:4173>. Compose publica el puerto solo en la interfaz local; el túnel de Cloudflare es quien la expone públicamente en <https://acordes.ingeniar.online/>.
 
@@ -75,7 +80,8 @@ El contenedor `acordes-app-c` se reconstruye con el código actual y el túnel r
 - `src/render/`: renderizado de HTML.
 - `src/songs/`: modelo, repositorio SQLite, rutas de canción y enriquecimiento (búsqueda de video, transcripción y alineación).
 - `src/routes/`: rutas HTTP y respuestas HTMX.
-- `src/db.ts`: conexión SQLite (WAL) y utilidades de transacción.
+- `src/db.ts`: conexión SQLite (WAL), versión del esquema y utilidades de transacción.
+- `src/db/schema.ts`: esquema vigente de la base; al cambiarlo se sube `SCHEMA_VERSION` y la base se recrea.
 - `public/`: estilos y lógica del cliente.
 - `tests/`: pruebas del parser, transposición, repositorio, rutas y alineación.
 - `data/`: base de datos local (ignorada por Git).
