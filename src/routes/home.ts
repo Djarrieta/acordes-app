@@ -8,7 +8,7 @@ export function homePage(): Response {
   <meta name="color-scheme" content="light">
   <title>Acordes — transpositor</title>
   <link rel="icon" href="data:,">
-  <link rel="stylesheet" href="/public/styles.css?v=editor-10">
+  <link rel="stylesheet" href="/public/styles.css?v=editor-12">
   <script src="https://unpkg.com/htmx.org@2.0.4"></script>
   <script src="/public/youtube.js?v=26" defer></script>
   <script src="/public/audio.js?v=14" defer></script>

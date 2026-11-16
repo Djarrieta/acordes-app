@@ -258,6 +258,10 @@ export function renderSong(song: Song, offset: number, audio: SongAudio | null =
          </div>
          <div class="youtube-media-box youtube-player-frame" data-youtube-player aria-label="Video de acompañamiento"></div>
        </div>
+       ${song.video ? "" : `<div class="player-video-empty" role="status">
+         <p>Esta canción no tiene video vinculado, así que no hay audio para reproducir.</p>
+         <button type="button" class="secondary" data-song-view="options">Buscar o vincular video</button>
+       </div>`}
        ${renderTimestampsWarning(song)}
        <div class="youtube-playback-controls" data-youtube-playback-controls hidden>
          <div class="youtube-progress" aria-label="Progreso de la canción">

@@ -683,6 +683,25 @@ h1 {
   padding: 0.8rem 1rem 1rem;
 }
 
+.player-video-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.6rem;
+  border-top: 1px solid #ece8de;
+  background: #fcfaf5;
+  padding: 1rem;
+  text-align: center;
+}
+
+.player-video-empty p {
+  max-width: 32rem;
+  margin: 0;
+  color: #5a564e;
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+
 .youtube-playback-controls[hidden] {
   display: none;
 }
@@ -1665,6 +1684,30 @@ body.is-song-view .song-lyrics {
   }
 }
 
+@media (max-height: 520px) {
+  body.is-song-view .youtube-media-box {
+    max-height: 6rem;
+  }
+
+  body.is-song-view .youtube-playback-controls {
+    gap: 0.35rem;
+    padding: 0.3rem;
+  }
+
+  body.is-song-view .youtube-play-button {
+    min-width: 11rem;
+    min-height: 2.15rem;
+    padding: 0.3rem 0.75rem;
+  }
+
+  body.is-song-view .pitch-controls,
+  body.is-song-view .audio-source-toggle,
+  body.is-song-view .youtube-options-button,
+  body.is-song-view .youtube-media-toggle {
+    min-height: 2.15rem;
+  }
+}
+
 @media (max-width: 680px) {
   .youtube-media-pair {
     grid-template-columns: minmax(0, 1fr);
@@ -1687,6 +1730,19 @@ body.is-song-view .song-lyrics {
 }
 
 @media (max-width: 899px) {
+  /* En pantallas pequeñas los controles de reproducción van justo debajo de la
+     cabecera para que siempre estén visibles, aunque el acorde y la letra no
+     quepan a la vez. */
+  body.is-song-view .youtube-playback-controls,
+  body.is-song-view .player-video-empty {
+    order: -1;
+  }
+
+  body.is-song-view .youtube-media-pair {
+    flex: 0 1 auto;
+    overflow: hidden;
+  }
+
   body.is-song-view .song-lyrics {
     flex: 1 1 0;
     overflow-x: hidden;
